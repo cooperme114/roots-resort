@@ -37,9 +37,14 @@ for(let a of attractions){if(a.mode==='boarding'){a.boardTimer+=dt;if(a.boardTim
 function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#9acb74';ctx.fillRect(0,0,W,H);for(let y=0;y<H;y+=T)for(let x=0;x<W;x+=T){if((x/T+y/T)%2===0){ctx.fillStyle='#ffffff13';ctx.fillRect(x,y,T,T);}}ctx.strokeStyle='#ffffff25';ctx.lineWidth=1;for(let x=0;x<=W;x+=T){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<=H;y+=T){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
 ctx.fillStyle='#e9d8b1';ctx.fillRect(0,565,W,45);ctx.fillStyle='#d9c79e';ctx.fillRect(0,609,W,7);
 for(let a of attractions){ctx.strokeStyle='#e8d5ac';ctx.lineWidth=16;ctx.beginPath();ctx.moveTo(a.x-85,a.y+78);ctx.lineTo(a.x-85,587);ctx.stroke();}
-for(let g of guests.filter(g=>g.mode!=='riding'&&g.mode!=='queue'))person(g);
-for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-102-(i%4)*19;g.y=a.y+79+Math.floor(i/4)*21;person(g);});}
-for(let a of attractions.sort((u,v)=>u.y-v.y))carousel(a);
+// Draw by ground position: people behind a carousel are hidden by it,
+// while people walking in front of its base appear in front.
+for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-102-(i%4)*19;g.y=a.y+79+Math.floor(i/4)*21;});}
+const scene=[
+  ...attractions.map(a=>({y:a.y+68,draw:()=>carousel(a)})),
+  ...guests.filter(g=>g.mode!=='riding').map(g=>({y:g.y+16,draw:()=>person(g)}))
+];
+scene.sort((a,b)=>a.y-b.y).forEach(item=>item.draw());
 if(placing){ctx.strokeStyle='#2a6e45';ctx.setLineDash([8,6]);ctx.lineWidth=3;ctx.strokeRect(pointer.x-105,pointer.y-95,210,190);ctx.setLineDash([]);}
 if(!attractions.length){ctx.fillStyle='#245d3c';ctx.font='bold 26px system-ui';ctx.textAlign='center';ctx.fillText('Your resort is waiting!',W/2,230);ctx.font='18px system-ui';ctx.fillText('Earn 150 gold, buy a carousel, then click to place it.',W/2,263);ctx.textAlign='left';}}
 let pointer={x:W/2,y:H/2};canvas.addEventListener('mousemove',e=>{let r=canvas.getBoundingClientRect();pointer={x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};});canvas.addEventListener('click',e=>{if(!placing)return;let r=canvas.getBoundingClientRect(),x=(e.clientX-r.left)*W/r.width,y=(e.clientY-r.top)*H/r.height;if(x<140||x>W-140||y<175||y>H-115){$('hint').textContent='Place the carousel farther inside the grass.';return;}if(attractions.some(a=>dist(a,{x,y})<230)){$('hint').textContent='Too close to another carousel. Choose another spot.';return;}attractions.push(makeCarousel(x,y));gold-=150;placing=false;$('hint').textContent='Carousel placed! Guests will discover it and start lining up.';updateUI();save();});
