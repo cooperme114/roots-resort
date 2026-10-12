@@ -30,8 +30,32 @@ let horses=Array.from({length:8},(_,i)=>{let ang=a.angle+i*Math.PI*2/8,depth=Mat
 function drawHorse(o){let sc=.85+(.12*(o.depth+1)/2),im=images[horseSprite(o.ang)];if(!im?.complete||!im.naturalWidth)return;let h=77*sc,w=h*im.naturalWidth/im.naturalHeight;let bob=Math.sin(a.rideTime*3+o.i*1.7)*3;let turn=((o.ang%(Math.PI*2))+Math.PI*2)%(Math.PI*2),delta=Math.atan2(Math.sin(turn-Math.PI/4),Math.cos(turn-Math.PI/4));let lift=16*Math.exp(-.5*Math.pow(delta/.48,2));let px=o.x,py=o.y+bob-lift;ctx.drawImage(im,px-w/2,py-h*.64,w,h);let g=a.riders[o.i];if(g)head(g,px,py-h*.37,.54*sc);}
 horses.filter(o=>o.depth<0).sort((u,v)=>u.depth-v.depth).forEach(drawHorse);image('carousel-center-01',458,307,44,105);horses.filter(o=>o.depth>=0).sort((u,v)=>u.depth-v.depth).forEach(drawHorse);image('carousel-top-01',294,139,372,236);ctx.restore();
 ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText(a.mode==='riding'?'🎠 Riding':a.queue.length?'Queue: '+a.queue.length:'Carousel',a.x,a.y+93);ctx.textAlign='left';}
-function moveTo(g,x,y,dt){let dx=x-g.x,dy=y-g.y,d=Math.hypot(dx,dy);if(d<3)return true;let step=Math.min(d,g.speed*dt);g.x+=dx/d*step;g.y+=dy/d*step;return false;}
-function update(dt){for(let g of guests){g.cooldown=Math.max(0,g.cooldown-dt);if(g.mode==='riding')continue;if(g.mode==='toQueue'){let a=g.ride;if(!a||!attractions.includes(a)){g.mode='wander';continue;}let dest={x:a.x-96,y:a.y+85};if(moveTo(g,dest.x,dest.y,dt)){g.mode='queue';a.queue.push(g);}continue;}if(g.mode==='queue')continue;if(g.mode==='exit'){if(moveTo(g,g.tx,g.ty,dt)){g.mode='wander';g.cooldown=8;g.think=2;}continue;}if(moveTo(g,g.tx,g.ty,dt)){g.tx=rand(30,W-30);g.ty=rand(90,H-35);}g.think-=dt;if(g.think<=0){g.think=rand(3,7);if(g.cooldown<=0&&attractions.length&&Math.random()<.66){let a=attractions[Math.floor(Math.random()*attractions.length)];if(a.queue.length<12){g.mode='toQueue';g.ride=a;}}}}
+// Carousel footprints are solid. A guest already inside one can walk out,
+// but guests outside cannot enter (including when a new ride is placed over them).
+function insideRide(x,y,a){return Math.abs(x-a.x)<108&&Math.abs(y-a.y)<69;}
+function blockedStep(g,nx,ny){
+  return attractions.some(a=>{
+    if(!insideRide(nx,ny,a))return false;
+    if(!insideRide(g.x,g.y,a))return true;
+    // Allow movement that takes a trapped guest closer to the footprint edge.
+    const clearance=(x,y)=>Math.min(108-Math.abs(x-a.x),69-Math.abs(y-a.y));
+    return clearance(nx,ny)>clearance(g.x,g.y)+.01;
+  });
+}
+function freeTarget(x,y){return !attractions.some(a=>insideRide(x,y,a));}
+function wanderTarget(g){for(let i=0;i<35;i++){let x=rand(30,W-30),y=rand(90,H-35);if(freeTarget(x,y)){g.tx=x;g.ty=y;return;}}g.tx=30;g.ty=H-35;}
+function moveTo(g,x,y,dt){
+  let dx=x-g.x,dy=y-g.y,d=Math.hypot(dx,dy);
+  if(d<3)return true;
+  let step=Math.min(d,g.speed*dt),nx=g.x+dx/d*step,ny=g.y+dy/d*step;
+  if(!blockedStep(g,nx,ny)){g.x=nx;g.y=ny;return false;}
+  // Slide along the outside of the ride instead of walking through it.
+  if(!blockedStep(g,nx,g.y)){g.x=nx;return false;}
+  if(!blockedStep(g,g.x,ny)){g.y=ny;return false;}
+  if(g.mode==='wander'||g.mode==='exit')wanderTarget(g);
+  return false;
+}
+function update(dt){for(let g of guests){g.cooldown=Math.max(0,g.cooldown-dt);if(g.mode==='riding')continue;if(g.mode==='toQueue'){let a=g.ride;if(!a||!attractions.includes(a)){g.mode='wander';continue;}let dest={x:a.x-96,y:a.y+85};if(moveTo(g,dest.x,dest.y,dt)){g.mode='queue';a.queue.push(g);}continue;}if(g.mode==='queue')continue;if(g.mode==='exit'){if(moveTo(g,g.tx,g.ty,dt)){g.mode='wander';g.cooldown=8;g.think=2;}continue;}if(moveTo(g,g.tx,g.ty,dt)){wanderTarget(g);}g.think-=dt;if(g.think<=0){g.think=rand(3,7);if(g.cooldown<=0&&attractions.length&&Math.random()<.66){let a=attractions[Math.floor(Math.random()*attractions.length)];if(a.queue.length<12){g.mode='toQueue';g.ride=a;}}}}
 for(let a of attractions){if(a.mode==='boarding'){a.boardTimer+=dt;if(a.boardTimer>.55){a.boardTimer=0;let slot=a.riders.findIndex(x=>!x);if(slot>=0&&a.queue.length){let g=a.queue.shift();g.mode='riding';g.slot=slot;a.riders[slot]=g;}else if(a.riders.some(Boolean)){a.mode='riding';a.rideTime=0;}else{a.timer+=dt;if(a.timer>5){a.timer=0;}}}}else if(a.mode==='riding'){a.angle+=dt*.78;a.rideTime+=dt;if(a.rideTime>13){a.mode='unloading';a.boardTimer=0;}}else if(a.mode==='unloading'){a.boardTimer+=dt;if(a.boardTimer>.48){a.boardTimer=0;let slot=a.riders.findIndex(Boolean);if(slot>=0){let g=a.riders[slot];a.riders[slot]=null;g.x=a.x+70;g.y=a.y+80;g.tx=rand(40,W-40);g.ty=rand(100,H-40);g.mode='exit';g.ride=null;totalRides++;}else{a.mode='boarding';a.timer=0;}}}}
 }
 function draw(){ctx.clearRect(0,0,W,H);ctx.fillStyle='#9acb74';ctx.fillRect(0,0,W,H);for(let y=0;y<H;y+=T)for(let x=0;x<W;x+=T){if((x/T+y/T)%2===0){ctx.fillStyle='#ffffff13';ctx.fillRect(x,y,T,T);}}ctx.strokeStyle='#ffffff25';ctx.lineWidth=1;for(let x=0;x<=W;x+=T){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}for(let y=0;y<=H;y+=T){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
