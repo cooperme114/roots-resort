@@ -219,7 +219,7 @@ for(const p of pathTiles){if(dirtImage.complete&&dirtImage.naturalWidth)ctx.draw
 for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-(a.type==='drop_tower'?72:72)-(i%4)*19;g.y=a.y+(a.type==='drop_tower'?65:61)+Math.floor(i/4)*21;});}
 const scene=[
   {y:H+1,draw:()=>{const im=gateImages[gateStyle];if(im.complete&&im.naturalWidth)ctx.drawImage(im,GATE_X-100,H-120,200,120);}},
-  ...attractions.map(a=>({y:a.y+68,draw:()=>a.type==='drop_tower'?drawDropTower(a):carousel(a)})),...vendors.map(v=>({y:v.y+42,draw:()=>{const im=vendorImages[v.type];if(im.complete&&im.naturalWidth)ctx.drawImage(im,v.x-65,v.y-48,130,96);}})),
+  ...attractions.map(a=>({y:a.y+68,draw:()=>a.type==='drop_tower'?drawDropTower(a):carousel(a)})),...vendors.map(v=>({y:v.y+42,draw:()=>{const im=vendorImages[v.type];if(im.complete&&im.naturalWidth)ctx.drawImage(im,v.x-65,v.y-48,130,96);if(v.queue&&v.queue.length){ctx.save();ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+v.queue.length,v.x,v.y+65);ctx.restore();}}})),
   ...guests.filter(g=>g.mode!=='riding'&&!(g.mode==='vendorService'&&['bathroom','shirts'].includes(g.vendor?.type))).map(g=>({y:performance.now()<(g.frontUntil||0)?H+100:g.y+16,draw:()=>person(g)}))
 ];
 scene.sort((a,b)=>a.y-b.y).forEach(item=>item.draw());
