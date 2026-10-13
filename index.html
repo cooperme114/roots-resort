@@ -13,7 +13,7 @@ const entrancePaths=Array.from({length:5},(_,i)=>({x:Math.floor(GATE_X/T)*T,y:(1
 let gold=0,streak=0,placing=false,paused=false,speed=1,attractions=[],vendors=[],pathTiles=[],guests=[],nextGuest=1,totalRides=0,qIndex=-1,answered=false,questionOptions=[],questionCorrect=0;
 const $=id=>document.getElementById(id),rand=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const firstNames=['Alex','Bailey','Casey','Dakota','Elliot','Frankie','Harper','Jamie','Kai','Logan','Morgan','Nico','Parker','Quinn','Riley','Sage','Taylor','Avery','Robin','Skyler'];
-function newGuest(){let n=nextGuest++;const stats=['boredom','hunger','thirst','exhaustion','bladder'];const first=Math.floor(Math.random()*stats.length);let second=Math.floor(Math.random()*(stats.length-1));if(second>=first)second++;const needs=Object.fromEntries(stats.map((key,i)=>[key,i===first?5:i===second?2:0]));return {id:n,name:firstNames[(n-1)%firstNames.length]+' '+n,...needs,steps:0,x:GATE_X+rand(-8,8),y:H+12,tx:GATE_X,ty:GATE_Y-125,speed:rand(20,34),skin:['#f3c39a','#d89a71','#b87b53','#e3ad84'][n%4],hair:['#513626','#a25d32','#2c2930','#b37b38'][n%4],shirt:colors[n%colors.length],hat:n%5===0&&colors[n%colors.length]!=='#5d8093',mode:'enter',ride:null,slot:-1,think:rand(1,5),cooldown:0};}
+function newGuest(){let n=nextGuest++;const stats=['boredom','hunger','thirst','exhaustion','bladder'];const first=Math.floor(Math.random()*stats.length);let second=Math.floor(Math.random()*(stats.length-1));if(second>=first)second++;const needs=Object.fromEntries(stats.map((key,i)=>[key,i===first?5:i===second?2:0]));return {headIndex:Math.floor(Math.random()*visitorHeadNames.length),bodyIndex:Math.floor(Math.random()*visitorBodyNames.length),facing:'front',id:n,name:firstNames[(n-1)%firstNames.length]+' '+n,...needs,steps:0,x:GATE_X+rand(-8,8),y:H+12,tx:GATE_X,ty:GATE_Y-125,speed:rand(20,34),skin:['#f3c39a','#d89a71','#b87b53','#e3ad84'][n%4],hair:['#513626','#a25d32','#2c2930','#b37b38'][n%4],shirt:colors[n%colors.length],hat:n%5===0&&colors[n%colors.length]!=='#5d8093',mode:'enter',ride:null,slot:-1,think:rand(1,5),cooldown:0};}
 for(let i=0;i<10;i++)guests.push(newGuest());
 function syncVisitors(){const desired=10+Math.floor(totalSpent/100);while(totalVisitorsAdmitted<desired){guests.push(newGuest());totalVisitorsAdmitted++;}}
 function saveData(){return {version:1,gold,streak,totalSpent,totalVisitorsAdmitted,visitorsLeft,attractions:attractions.map(a=>({x:a.x,y:a.y,angle:a.angle||0,type:a.type||'carousel',style:a.style||'Classic',name:a.name||null})),vendors:vendors.map(v=>({x:v.x,y:v.y,type:v.type,flip:!!v.flip})),pathTiles,totalRides,gateStyle};}
@@ -80,9 +80,28 @@ function ask(){qIndex=(qIndex+1+Math.floor(Math.random()*(roots.length-1)))%root
 function answer(i){if(answered)return;answered=true;let correct=i===questionCorrect;if(correct){streak++;let gain=Math.min(100,streak*10);gold+=gain;$('feedback').textContent='✓ Correct! +'+gain+' gold.';}else{streak=0;$('feedback').textContent='Not quite! “'+roots[qIndex][0]+'” means “'+roots[qIndex][1]+'”. Streak reset.';}[...$('answers').children].forEach((b,j)=>{b.disabled=true;b.style.background=j===questionCorrect?'#b9e5ae':j===i?'#f3c0bd':'#e8f0e5';});updateUI();setTimeout(ask,950);}
 function image(name,x,y,w,h){let im=images[name];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x,y,w,h);}
 function ellipse(x,y,rx,ry,color){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
+const visitorHeadNames=["black_female","black_male","blonde_female","blonde_male","brown_female","brown_male","green_male","pink_female","red_female","red_male"],visitorBodyNames=["blue_star","blue_stripes","green_sweater","orange_stripes","pink_hoodie","purple_hoodie","rainbow_sweater","red_sweater","teal_hoodie","yellow_hoodie"];
+const visitorSprites={heads:{},bodies:{}};
+for(const [kind,names] of [['heads',visitorHeadNames],['bodies',visitorBodyNames]])for(const name of names)for(const direction of ['front','back','left','right']){
+ const im=new Image(),key=name+'_'+direction;visitorSprites[kind][key]={im,box:null};
+ im.onload=()=>{try{const c=document.createElement('canvas');c.width=im.naturalWidth;c.height=im.naturalHeight;const cx=c.getContext('2d',{willReadFrequently:true});cx.drawImage(im,0,0);const data=cx.getImageData(0,0,c.width,c.height).data;let minX=c.width,minY=c.height,maxX=-1,maxY=-1;for(let y=0;y<c.height;y++)for(let x=0;x<c.width;x++)if(data[(y*c.width+x)*4+3]>20){minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}visitorSprites[kind][key].box=maxX>=0?[minX,minY,maxX-minX+1,maxY-minY+1]:null;}catch(e){visitorSprites[kind][key].box=[0,0,im.width,im.height];}};
+ im.src='sprites/visitors/'+kind+'/'+key+'.png';
+}
+function visitorParts(g){if(g.headIndex===undefined)g.headIndex=Math.floor(Math.random()*visitorHeadNames.length);if(g.bodyIndex===undefined)g.bodyIndex=Math.floor(Math.random()*visitorBodyNames.length);return [visitorHeadNames[g.headIndex%visitorHeadNames.length],visitorBodyNames[g.bodyIndex%visitorBodyNames.length]];}
+function drawVisitorSprite(g,x,y,scale=1,direction){
+ const [h,b]=visitorParts(g),dir=direction||g.facing||'front';
+ const body=visitorSprites.bodies[b+'_'+dir],headPart=visitorSprites.heads[h+'_'+dir];
+ if(!body?.box||!headPart?.box)return false;
+ const draw=(part,px,py,w,height)=>{const [sx,sy,sw,sh]=part.box;ctx.drawImage(part.im,sx,sy,sw,sh,px,py,w,height);};
+ ctx.save();ctx.imageSmoothingEnabled=false;ctx.translate(x,y);ctx.scale(scale,scale);
+ // Same overall height as the original hand-drawn visitors (about 32 pixels).
+ draw(body,-10,-8,20,23);draw(headPart,-9,-19,18,15);
+ ctx.restore();return true;
+}
 function head(g,x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ellipse(0,0,10,10,g.skin);ctx.fillStyle=g.hair;ctx.beginPath();ctx.arc(0,-3,10,Math.PI,Math.PI*2);ctx.lineTo(10,0);ctx.lineTo(-10,0);ctx.fill();if(g.hat&&g.shirt!=='#5d8093'){ctx.fillStyle=g.shirt;ctx.fillRect(-11,-10,22,4);ctx.fillRect(-8,-15,16,7);}ctx.fillStyle='#222';ctx.fillRect(-4,0,2,2);ctx.fillRect(3,0,2,2);ctx.restore();}
-function person(g){ctx.save();ctx.translate(g.x,g.y);ctx.fillStyle='#293d50';ctx.fillRect(-4,7,3,9);ctx.fillRect(2,7,3,9);ctx.fillStyle=g.shirt;ctx.fillRect(-7,-5,14,13);head(g,0,-12,.75);ctx.restore();}
+function person(g){if(drawVisitorSprite(g,g.x,g.y))return;ctx.save();ctx.translate(g.x,g.y);ctx.fillStyle='#293d50';ctx.fillRect(-4,7,3,9);ctx.fillRect(2,7,3,9);ctx.fillStyle=g.shirt;ctx.fillRect(-7,-5,14,13);head(g,0,-12,.75);ctx.restore();}
 function seatedPerson(g,x,y,scale=.62,side=false,flipped=false){
+ if(drawVisitorSprite(g,x,y,scale,side?(flipped?'right':'left'):'front'))return;
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
  if(side){ctx.scale(flipped?1:-1,1);ctx.fillStyle=g.shirt;ctx.fillRect(-5,-6,10,11);ctx.fillStyle=g.skin||'#e9b28a';ctx.fillRect(3,-3,3,6);head(g,1,-13,.75);ctx.restore();return;}
  ctx.fillStyle='#293d50';
@@ -170,7 +189,7 @@ function moveTo(g,x,y,dt){
   if(!points.length)return false;
   while(points.length&&Math.hypot(points[0].x-g.x,points[0].y-g.y)<3)points.shift();
   if(!points.length)return true;
-  let p=points[0],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);
+  let p=points[0],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);if(Math.abs(dx)>Math.abs(dy))g.facing=dx>0?'right':'left';else if(Math.abs(dy)>1)g.facing=dy>0?'front':'back';
   let step=Math.min(d,g.speed*dt),nx=g.x+dx/d*step,ny=g.y+dy/d*step;
   if(freeTarget(nx,ny)||!freeTarget(g.x,g.y)){g.x=nx;g.y=ny;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
   else g.route=null; // Recalculate if the resort layout changes.
