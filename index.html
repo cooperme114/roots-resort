@@ -152,7 +152,34 @@ function freeTarget(x,y){return ![...attractions,...vendors].some(item=>{const b
 function pathCenter(p){return {x:p.x+T/2,y:p.y+T/2};}
 function nearestPath(x,y){let best=null,d=Infinity;for(const p of pathTiles){const c=pathCenter(p),v=Math.hypot(c.x-x,c.y-y);if(v<d&&freeTarget(c.x,c.y)){best=c;d=v;}}return best;}
 function pathNeighbor(x,y){const nearby=pathTiles.map(pathCenter).filter(p=>Math.hypot(p.x-x,p.y-y)<T*1.1&&freeTarget(p.x,p.y));return nearby.length?nearby[Math.floor(Math.random()*nearby.length)]:null;}
-function wanderTarget(g){if(pathTiles.length){const current=nearestPath(g.x,g.y);const onPath=current&&Math.hypot(current.x-g.x,current.y-g.y)<T*.8;const p=onPath?pathNeighbor(current.x,current.y)||current:current;if(p&&(!onPath||Math.hypot(p.x-g.x,p.y-g.y)>3)){g.tx=p.x;g.ty=p.y;g.route=null;return;}if(onPath){g.tx=current.x;g.ty=current.y;g.route=null;return;}}for(let i=0;i<35;i++){let x=rand(30,W-30),y=rand(90,H-35);if(freeTarget(x,y)){g.tx=x;g.ty=y;g.route=null;return;}}g.tx=30;g.ty=H-35;g.route=null;}
+function wanderTarget(g){
+ // Choose a short walk along the path, not a random adjacent tile every time.
+ // Remember the previous tile so guests don't immediately reverse direction.
+ if(pathTiles.length){
+  const current=nearestPath(g.x,g.y);
+  if(current&&Math.hypot(current.x-g.x,current.y-g.y)<T*1.5){
+   let p=current,previous=g.lastWanderPath||null;
+   const steps=2+Math.floor(Math.random()*4);
+   for(let n=0;n<steps;n++){
+    const options=pathTiles.map(pathCenter).filter(q=>
+      Math.abs(q.x-p.x)+Math.abs(q.y-p.y)===T&&freeTarget(q.x,q.y));
+    const forward=options.filter(q=>!previous||q.x!==previous.x||q.y!==previous.y);
+    const choices=forward.length?forward:options;
+    if(!choices.length)break;
+    const next=choices[Math.floor(Math.random()*choices.length)];
+    previous=p;p=next;
+   }
+   if(Math.hypot(p.x-g.x,p.y-g.y)>5){
+    g.lastWanderPath=previous;g.tx=p.x;g.ty=p.y;g.route=null;return;
+   }
+  }
+ }
+ for(let i=0;i<35;i++){
+  const x=rand(30,W-30),y=rand(90,H-35);
+  if(freeTarget(x,y)){g.tx=x;g.ty=y;g.route=null;return;}
+ }
+ g.tx=30;g.ty=H-35;g.route=null;
+}
 function clearPath(p,q){
   // Test the whole path, not only the guest's next tiny step.
   let n=Math.max(1,Math.ceil(Math.hypot(q.x-p.x,q.y-p.y)/9));
@@ -177,6 +204,8 @@ function routeViaPaths(g,target){
 function routeAround(g,target){
  const from={x:g.x,y:g.y};
  if(!freeTarget(target.x,target.y))return [target];
+ // Never take a long path detour when the destination is directly reachable.
+ if(clearPath(from,target))return [target];
  const pathRoute=routeViaPaths(g,target);if(pathRoute)return pathRoute;
  const nodes=[from,target],pad=11;
  for(const item of [...attractions,...vendors]){
