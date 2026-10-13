@@ -84,7 +84,7 @@ function head(g,x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ellipse(0,0,
 function person(g){ctx.save();ctx.translate(g.x,g.y);ctx.fillStyle='#293d50';ctx.fillRect(-4,7,3,9);ctx.fillRect(2,7,3,9);ctx.fillStyle=g.shirt;ctx.fillRect(-7,-5,14,13);head(g,0,-12,.75);ctx.restore();}
 function seatedPerson(g,x,y,scale=.62,side=false,flipped=false){
  ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
- if(side){ctx.scale(flipped?-1:1,1);ctx.fillStyle=g.shirt;ctx.fillRect(-5,-6,10,11);ctx.fillStyle=g.skin||'#e9b28a';ctx.fillRect(3,-3,3,6);head(g,1,-13,.75);ctx.restore();return;}
+ if(side){ctx.scale(flipped?1:-1,1);ctx.fillStyle=g.shirt;ctx.fillRect(-5,-6,10,11);ctx.fillStyle=g.skin||'#e9b28a';ctx.fillRect(3,-3,3,6);head(g,1,-13,.75);ctx.restore();return;}
  ctx.fillStyle='#293d50';
  // Legs project forward from the seat rather than straight down.
  ctx.fillRect(-6,7,5,5);ctx.fillRect(2,7,5,5);
