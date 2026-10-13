@@ -176,7 +176,7 @@ function routeViaPaths(g,target){
 }
 function routeAround(g,target){
  const from={x:g.x,y:g.y};
- if(!freeTarget(target.x,target.y))return [];
+ if(!freeTarget(target.x,target.y))return [target];
  const pathRoute=routeViaPaths(g,target);if(pathRoute)return pathRoute;
  const nodes=[from,target],pad=11;
  for(const item of [...attractions,...vendors]){
@@ -195,7 +195,7 @@ function routeAround(g,target){
    if(d<cost[v]){cost[v]=d;prev[v]=u;}
   }
  }
- if(!isFinite(cost[1]))return [];
+ if(!isFinite(cost[1]))return [target]; // Last-resort escape through obstacles.
  const path=[];let u=1;while(u>0){path.unshift(nodes[u]);u=prev[u];}return path;
 }
 function moveTo(g,x,y,dt){
@@ -209,7 +209,7 @@ function moveTo(g,x,y,dt){
   if(!points.length)return true;
   let p=points[0],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);if(Math.abs(dx)>Math.abs(dy))g.facing=dx>0?'right':'left';else if(Math.abs(dy)>1)g.facing=dy>0?'front':'back';
   let step=Math.min(d,g.speed*dt),nx=g.x+dx/d*step,ny=g.y+dy/d*step;
-  if(freeTarget(nx,ny)||(!freeTarget(g.x,g.y)&&Math.hypot(nx-x,ny-y)<Math.hypot(g.x-x,g.y-y))){g.x=nx;g.y=ny;g.stuckFor=0;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
+  if(freeTarget(nx,ny)||(!freeTarget(g.x,g.y)&&Math.hypot(nx-x,ny-y)<Math.hypot(g.x-x,g.y-y))||(g.stuckFor||0)>1.2){g.x=nx;g.y=ny;g.stuckFor=0;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
   else {g.route=null;g.stuckFor=(g.stuckFor||0)+dt;} // Recalculate if the resort layout changes.
   return false;
 }
