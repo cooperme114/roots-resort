@@ -9,7 +9,7 @@ const canvas=document.getElementById('park'),ctx=canvas.getContext('2d');const W
 const roots=[['contra','opposite'],['sen','feel'],['mort','death'],['vita','life'],['sol','comfort'],['mis','wrong'],['gon','angle'],['scope','see'],['vac','empty'],['struct','build']];
 const colors=['#d75c63','#428ac9','#efb63b','#8b64b8','#47a578','#f28e50','#c65c9d','#5d8093'];
 let totalSpent=0,totalVisitorsAdmitted=10,visitorsLeft=0;const GATE_X=558,GATE_Y=H;let gateStyle=1;const gateImages=[null,new Image(),new Image()];gateImages[1].src='sprites/other/park_gate_01.png';gateImages[2].src='sprites/other/park_gate_02_halloween.png';
-const entrancePaths=Array.from({length:5},(_,i)=>[14,15].map(col=>({x:col*T,y:(13+i)*T}))).flat();
+const entrancePaths=Array.from({length:5},(_,i)=>({x:Math.floor(GATE_X/T)*T,y:(13+i)*T}));
 let gold=0,streak=0,placing=false,paused=false,speed=1,attractions=[],vendors=[],pathTiles=[],guests=[],nextGuest=1,totalRides=0,qIndex=-1,answered=false,questionOptions=[],questionCorrect=0;
 const $=id=>document.getElementById(id),rand=(a,b)=>a+Math.random()*(b-a),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const firstNames=['Alex','Bailey','Casey','Dakota','Elliot','Frankie','Harper','Jamie','Kai','Logan','Morgan','Nico','Parker','Quinn','Riley','Sage','Taylor','Avery','Robin','Skyler'];
