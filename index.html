@@ -132,7 +132,15 @@ ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';if
 // The decorated carousel is a no-walking zone. The narrow strip at its
 // front remains open so guests can visibly pass in front of the base.
 function insideRide(x,y,a){return a.type==='drop_tower'?Math.abs(x-a.x)<60&&y>a.y-40&&y<a.y+45:a.type==='bird_show'?Math.abs(x-a.x)<96&&y>a.y-62&&y<a.y+10:Math.abs(x-a.x)<110&&y>a.y-84&&y<a.y+47;}
-function freeTarget(x,y){return !attractions.some(a=>insideRide(x,y,a));}
+function blockedFootprint(item){
+ if(holidayType(item.type)){const d=holidayDecor[item.type];return {l:item.x-d.w/2-4,r:item.x+d.w/2+4,t:item.y-d.h/2-3,b:item.y+d.h/2+3};}
+ if(benchType(item.type))return item.type==='bench_side'?{l:item.x-17,r:item.x+17,t:item.y-25,b:item.y+25}:{l:item.x-27,r:item.x+27,t:item.y-18,b:item.y+18};
+ if(item.type==='bird_show')return {l:item.x-98,r:item.x+98,t:item.y-62,b:item.y+10};
+ if(item.type==='drop_tower')return {l:item.x-60,r:item.x+60,t:item.y-40,b:item.y+45};
+ if(item.type==='carousel')return {l:item.x-110,r:item.x+110,t:item.y-84,b:item.y+47};
+ return {l:item.x-61,r:item.x+61,t:item.y-45,b:item.y+40};
+}
+function freeTarget(x,y){return ![...attractions,...vendors].some(item=>{const b=blockedFootprint(item);return x>b.l&&x<b.r&&y>b.t&&y<b.b;});}
 function pathCenter(p){return {x:p.x+T/2,y:p.y+T/2};}
 function nearestPath(x,y){let best=null,d=Infinity;for(const p of pathTiles){const c=pathCenter(p),v=Math.hypot(c.x-x,c.y-y);if(v<d&&freeTarget(c.x,c.y)){best=c;d=v;}}return best;}
 function pathNeighbor(x,y){const nearby=pathTiles.map(pathCenter).filter(p=>Math.hypot(p.x-x,p.y-y)<T*1.1&&freeTarget(p.x,p.y));return nearby.length?nearby[Math.floor(Math.random()*nearby.length)]:null;}
@@ -159,33 +167,27 @@ function routeViaPaths(g,target){
  return [...route,target];
 }
 function routeAround(g,target){
-  const from={x:g.x,y:g.y};
-  const pathRoute=routeViaPaths(g,target);if(pathRoute)return pathRoute;
-  // A guest caught inside a newly placed carousel is allowed to exit.
-  if(!freeTarget(from.x,from.y))return [target];
-  const nodes=[from,target];
-  for(const a of attractions){
-    for(const x of [a.x-123,a.x+123])
-      for(const y of [a.y-97,a.y+60])
-        if(x>12&&x<W-12&&y>12&&y<H-12&&freeTarget(x,y))nodes.push({x,y});
+ const from={x:g.x,y:g.y};
+ const pathRoute=routeViaPaths(g,target);if(pathRoute)return pathRoute;
+ const nodes=[from,target],pad=11;
+ for(const item of [...attractions,...vendors]){
+  const b=blockedFootprint(item);
+  for(const x of [b.l-pad,b.r+pad])for(const y of [b.t-pad,b.b+pad]){
+   if(x>8&&x<W-8&&y>8&&y<H-8&&freeTarget(x,y))nodes.push({x,y});
   }
-  const cost=Array(nodes.length).fill(Infinity),prev=Array(nodes.length).fill(-1),used=new Set();
-  cost[0]=0;
-  for(let k=0;k<nodes.length;k++){
-    let u=-1;
-    for(let i=0;i<nodes.length;i++)if(!used.has(i)&&(u<0||cost[i]<cost[u]))u=i;
-    if(u<0||!isFinite(cost[u])||u===1)break;
-    used.add(u);
-    for(let v=0;v<nodes.length;v++){
-      if(v===u||used.has(v)||!clearPath(nodes[u],nodes[v]))continue;
-      let d=cost[u]+Math.hypot(nodes[v].x-nodes[u].x,nodes[v].y-nodes[u].y);
-      if(d<cost[v]){cost[v]=d;prev[v]=u;}
-    }
+ }
+ const cost=Array(nodes.length).fill(Infinity),prev=Array(nodes.length).fill(-1),used=new Set();cost[0]=0;
+ for(let k=0;k<nodes.length;k++){
+  let u=-1;for(let i=0;i<nodes.length;i++)if(!used.has(i)&&(u<0||cost[i]<cost[u]))u=i;
+  if(u<0||!isFinite(cost[u])||u===1)break;used.add(u);
+  for(let v=0;v<nodes.length;v++){
+   if(v===u||used.has(v)||!clearPath(nodes[u],nodes[v]))continue;
+   const d=cost[u]+Math.hypot(nodes[v].x-nodes[u].x,nodes[v].y-nodes[u].y);
+   if(d<cost[v]){cost[v]=d;prev[v]=u;}
   }
-  if(!isFinite(cost[1]))return [];
-  let path=[],u=1;
-  while(u>0){path.unshift(nodes[u]);u=prev[u];}
-  return path;
+ }
+ if(!isFinite(cost[1]))return [];
+ const path=[];let u=1;while(u>0){path.unshift(nodes[u]);u=prev[u];}return path;
 }
 function moveTo(g,x,y,dt){
   const target={x,y};
@@ -198,7 +200,7 @@ function moveTo(g,x,y,dt){
   if(!points.length)return true;
   let p=points[0],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);if(Math.abs(dx)>Math.abs(dy))g.facing=dx>0?'right':'left';else if(Math.abs(dy)>1)g.facing=dy>0?'front':'back';
   let step=Math.min(d,g.speed*dt),nx=g.x+dx/d*step,ny=g.y+dy/d*step;
-  if(freeTarget(nx,ny)||!freeTarget(g.x,g.y)){g.x=nx;g.y=ny;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
+  if(freeTarget(nx,ny)||(!freeTarget(g.x,g.y)&&Math.hypot(nx-x,ny-y)<Math.hypot(g.x-x,g.y-y))){g.x=nx;g.y=ny;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
   else g.route=null; // Recalculate if the resort layout changes.
   return false;
 }
@@ -217,7 +219,7 @@ function chooseActivity(g){
  for(const key of needs){
   const level=g[key];if(level<8)break;
   const candidates=[
-   ...vendors.map(item=>({kind:'vendor',item})),
+   ...vendors.filter(item=>!holidayType(item.type)).map(item=>({kind:'vendor',item})),
    ...attractions.filter(a=>a.queue.length<(a.type==='bird_show'?24:12)).map(item=>({kind:'ride',item}))
   ].filter(o=>activityRelief(o.kind,o.item,key)>0);
   if(!candidates.length)continue;
@@ -326,7 +328,8 @@ if(selectedGuest){drawGuestStats(selectedGuest);}drawStructureButton();if(moving
 if(removePaths){ctx.strokeStyle='#c44444';ctx.lineWidth=3;ctx.strokeRect(Math.floor(pointer.x/T)*T,Math.floor(pointer.y/T)*T,T,T);}if(placing){ctx.strokeStyle='#2a6e45';ctx.setLineDash([8,6]);ctx.lineWidth=3;if(selectedBuild==='dirt')ctx.strokeRect(Math.floor(pointer.x/T)*T,Math.floor(pointer.y/T)*T,T,T);else if(holidayType(selectedBuild)){const d=holidayDecor[selectedBuild];ctx.strokeRect(pointer.x-d.w/2,pointer.y-d.h/2,d.w,d.h);}else if(selectedBuild==='bird_show')ctx.strokeRect(pointer.x-73,pointer.y-47,146,56);else if(selectedBuild==='drop_tower')ctx.strokeRect(pointer.x-80,pointer.y-268,160,310);else if(selectedBuild!=='carousel')ctx.strokeRect(pointer.x-65,pointer.y-48,130,96);else ctx.strokeRect(pointer.x-77,pointer.y-108,154,133);ctx.setLineDash([]);}
 }
 let pointer={x:W/2,y:H/2};
-function placeRide(x,y){if(holidayType(selectedBuild)){if(gold<25)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose a clear spot for the decoration.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null,sitters:[]});gold-=25;totalSpent+=25;syncVisitors();placing=false;save();updateUI();$('hint').textContent=holidayDecor[selectedBuild].name+' placed!';return;}if(selectedBuild==='dirt'){const px=Math.floor(x/T)*T,py=Math.floor(y/T)*T;if(gold<5){placing=false;$('hint').textContent='Not enough gold for another dirt tile.';updateUI();return;}if(!pathTiles.some(p=>p.x===px&&p.y===py)){pathTiles.push({x:px,y:py});gold-=5;totalSpent+=5;syncVisitors();for(const g of guests)if(g.mode==='wander')g.route=null;}if(gold<5)placing=false;$('hint').textContent=placing?'Keep clicking to lay paths (5 gold each).':'Not enough gold for another tile.';updateUI();save();return;}if(benchType(selectedBuild)){if(gold<100)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose a clear spot for the bench.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null,sitters:[],flip:false});gold-=100;totalSpent+=100;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Bench placed! Two visitors can rest for 10 seconds.';return;}if(selectedBuild==='bird_show'){if(gold<400)return;if(!validMove({type:'bird_show'},'ride',x,y)){$('hint').textContent='Choose a larger clear area for the Bird Show.';return;}attractions.push(makeBirdShow(x,y));gold-=400;totalSpent+=400;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Bird Show placed! Twelve guests can watch together.';return;}if(selectedBuild==='drop_tower'){if(gold<300)return;if(!validMove({type:'drop_tower'},'ride',x,y)){$('hint').textContent='Choose a clear spot with room for the tall drop tower.';return;}attractions.push(makeDropTower(x,y));gold-=300;totalSpent+=300;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Drop tower placed! Four guests can ride together.';return;}if(selectedBuild!=='carousel'){if(gold<100)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose an open spot for this vendor.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null});gold-=100;totalSpent+=100;syncVisitors();placing=false;updateUI();save();return;}if(!validMove({type:'carousel'},'ride',x,y)){$('hint').textContent='Place the carousel farther inside the grass.';return;}attractions.push(makeCarousel(x,y));gold-=150;totalSpent+=150;syncVisitors();placing=false;$('hint').textContent='Carousel placed! Guests will discover it and start lining up.';updateUI();save();}
+function clearGuestRoutes(){for(const g of guests)g.route=null;}
+function placeRide(x,y){if(holidayType(selectedBuild)){if(gold<25)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose a clear spot for the decoration.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null,sitters:[]});clearGuestRoutes();gold-=25;totalSpent+=25;syncVisitors();placing=false;save();updateUI();$('hint').textContent=holidayDecor[selectedBuild].name+' placed!';return;}if(selectedBuild==='dirt'){const px=Math.floor(x/T)*T,py=Math.floor(y/T)*T;if(gold<5){placing=false;$('hint').textContent='Not enough gold for another dirt tile.';updateUI();return;}if(!pathTiles.some(p=>p.x===px&&p.y===py)){pathTiles.push({x:px,y:py});gold-=5;totalSpent+=5;syncVisitors();for(const g of guests)if(g.mode==='wander')g.route=null;}if(gold<5)placing=false;$('hint').textContent=placing?'Keep clicking to lay paths (5 gold each).':'Not enough gold for another tile.';updateUI();save();return;}if(benchType(selectedBuild)){if(gold<100)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose a clear spot for the bench.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null,sitters:[],flip:false});clearGuestRoutes();gold-=100;totalSpent+=100;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Bench placed! Two visitors can rest for 10 seconds.';return;}if(selectedBuild==='bird_show'){if(gold<400)return;if(!validMove({type:'bird_show'},'ride',x,y)){$('hint').textContent='Choose a larger clear area for the Bird Show.';return;}attractions.push(makeBirdShow(x,y));clearGuestRoutes();gold-=400;totalSpent+=400;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Bird Show placed! Twelve guests can watch together.';return;}if(selectedBuild==='drop_tower'){if(gold<300)return;if(!validMove({type:'drop_tower'},'ride',x,y)){$('hint').textContent='Choose a clear spot with room for the tall drop tower.';return;}attractions.push(makeDropTower(x,y));clearGuestRoutes();gold-=300;totalSpent+=300;syncVisitors();placing=false;save();updateUI();$('hint').textContent='Drop tower placed! Four guests can ride together.';return;}if(selectedBuild!=='carousel'){if(gold<100)return;if(!validMove({type:selectedBuild},'vendor',x,y)){$('hint').textContent='Choose an open spot for this vendor.';return;}vendors.push({x,y,type:selectedBuild,queue:[],serving:null});clearGuestRoutes();gold-=100;totalSpent+=100;syncVisitors();placing=false;updateUI();save();return;}if(!validMove({type:'carousel'},'ride',x,y)){$('hint').textContent='Place the carousel farther inside the grass.';return;}attractions.push(makeCarousel(x,y));clearGuestRoutes();gold-=150;totalSpent+=150;syncVisitors();placing=false;$('hint').textContent='Carousel placed! Guests will discover it and start lining up.';updateUI();save();}
 function sellAt(x,y){const v=vendors.find(v=>Math.abs(v.x-x)<(holidayType(v.type)?holidayDecor[v.type].w/2:65)&&Math.abs(v.y-y)<(holidayType(v.type)?holidayDecor[v.type].h/2:52));if(v){for(const g of guests){if(g.vendor===v){g.vendor=null;g.mode='wander';g.cooldown=2;wanderTarget(g);}}vendors=vendors.filter(item=>item!==v);const refund=holidayType(v.type)?12:50;gold+=refund;$('hint').textContent=(holidayType(v.type)?holidayDecor[v.type].name:'Vendor')+' sold for '+refund+' gold.';save();updateUI();return;}const a=rideAt(x,y);if(a){for(const g of guests){if(g.ride===a){g.ride=null;g.mode='wander';g.cooldown=2;wanderTarget(g);}}attractions=attractions.filter(item=>item!==a);gold+=a.type==='bird_show'?200:a.type==='drop_tower'?150:75;$('hint').textContent=(a.type==='bird_show'?'Bird Show':a.type==='drop_tower'?'Drop tower':'Carousel')+' sold for '+(a.type==='bird_show'?200:a.type==='drop_tower'?150:75)+' gold.';save();updateUI();return;}$('hint').textContent='Click a vendor or carousel to sell it.';}
 function structureAt(x,y){if(x>=GATE_X-100&&x<=GATE_X+100&&y>=H-120&&y<=H)return {type:'gate'};const v=vendors.find(v=>Math.abs(v.x-x)<(holidayType(v.type)?holidayDecor[v.type].w/2:benchType(v.type)?45:65)&&Math.abs(v.y-y)<(holidayType(v.type)?holidayDecor[v.type].h/2:benchType(v.type)?45:52));if(v)return {type:'vendor',item:v};const a=rideAt(x,y);return a?{type:'ride',item:a}:null;}
 let pendingGateStyle=null,pendingTowerStyle=null,pendingCarouselStyle=null,movingStructure=null;
