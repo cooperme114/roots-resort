@@ -82,6 +82,16 @@ function image(name,x,y,w,h){let im=images[name];if(im?.complete&&im.naturalWidt
 function ellipse(x,y,rx,ry,color){ctx.beginPath();ctx.ellipse(x,y,rx,ry,0,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();}
 function head(g,x,y,s){ctx.save();ctx.translate(x,y);ctx.scale(s,s);ellipse(0,0,10,10,g.skin);ctx.fillStyle=g.hair;ctx.beginPath();ctx.arc(0,-3,10,Math.PI,Math.PI*2);ctx.lineTo(10,0);ctx.lineTo(-10,0);ctx.fill();if(g.hat&&g.shirt!=='#5d8093'){ctx.fillStyle=g.shirt;ctx.fillRect(-11,-10,22,4);ctx.fillRect(-8,-15,16,7);}ctx.fillStyle='#222';ctx.fillRect(-4,0,2,2);ctx.fillRect(3,0,2,2);ctx.restore();}
 function person(g){ctx.save();ctx.translate(g.x,g.y);ctx.fillStyle='#293d50';ctx.fillRect(-4,7,3,9);ctx.fillRect(2,7,3,9);ctx.fillStyle=g.shirt;ctx.fillRect(-7,-5,14,13);head(g,0,-12,.75);ctx.restore();}
+function seatedPerson(g,x,y,scale=.62){
+ ctx.save();ctx.translate(x,y);ctx.scale(scale,scale);
+ ctx.fillStyle='#293d50';
+ // Legs project forward from the seat rather than straight down.
+ ctx.fillRect(-6,7,5,5);ctx.fillRect(2,7,5,5);
+ ctx.fillRect(-8,11,5,4);ctx.fillRect(3,11,5,4);
+ ctx.fillStyle=g.shirt;ctx.fillRect(-7,-6,14,14);
+ ctx.fillStyle=g.skin||'#e9b28a';ctx.fillRect(-9,1,3,7);ctx.fillRect(7,1,3,7);
+ head(g,0,-13,.75);ctx.restore();
+}
 function horseSprite(a){const t=((a%(Math.PI*2))+Math.PI*2)%(Math.PI*2);const facing=[4,5,1,1,11,10,9,8,7,6,3,3];return 'horse_'+String(facing[Math.round(t/(Math.PI*2)*12)%12]).padStart(2,'0');}
 // This is the approved animation geometry, transformed as ONE attraction instance.
 function carousel(a){ctx.save();ctx.translate(a.x,a.y);const S=.44;ctx.scale(S,S);ctx.translate(-480,-385);
@@ -219,7 +229,7 @@ for(const p of pathTiles){if(dirtImage.complete&&dirtImage.naturalWidth)ctx.draw
 for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-(a.type==='drop_tower'?72:72)-(i%4)*19;g.y=a.y+(a.type==='drop_tower'?65:61)+Math.floor(i/4)*21;});}
 const scene=[
   {y:H+1,draw:()=>{const im=gateImages[gateStyle];if(im.complete&&im.naturalWidth)ctx.drawImage(im,GATE_X-100,H-120,200,120);}},
-  ...attractions.map(a=>({y:a.y+68,draw:()=>a.type==='drop_tower'?drawDropTower(a):carousel(a)})),...vendors.map(v=>({y:v.y+42,draw:()=>{const im=vendorImages[v.type];if(im.complete&&im.naturalWidth){if(benchType(v.type)){const bw=v.type==='bench_side'?25:48,bh=v.type==='bench_side'?44:31;ctx.save();if(v.flip){ctx.translate(v.x*2,0);ctx.scale(-1,1);}ctx.drawImage(im,v.x-bw/2,v.y-bh/2,bw,bh);ctx.restore();}else ctx.drawImage(im,v.x-65,v.y-48,130,96);}if(benchType(v.type)){(v.sitters||[]).forEach((g,i)=>{g.x=v.x+(v.type==='bench_side'?(v.flip?-9:9):(i===0?-18:18));g.y=v.y+8;person(g);});}if(v.queue&&v.queue.length){ctx.save();ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+v.queue.length,v.x,v.y+65);ctx.restore();}}})),
+  ...attractions.map(a=>({y:a.y+68,draw:()=>a.type==='drop_tower'?drawDropTower(a):carousel(a)})),...vendors.map(v=>({y:v.y+42,draw:()=>{const im=vendorImages[v.type];if(im.complete&&im.naturalWidth){if(benchType(v.type)){const bw=v.type==='bench_side'?25:48,bh=v.type==='bench_side'?44:31;ctx.save();if(v.flip){ctx.translate(v.x*2,0);ctx.scale(-1,1);}ctx.drawImage(im,v.x-bw/2,v.y-bh/2,bw,bh);ctx.restore();}else ctx.drawImage(im,v.x-65,v.y-48,130,96);}if(benchType(v.type)){(v.sitters||[]).forEach((g,i)=>{const side=v.type==='bench_side';const x=v.x+(side?(v.flip?-5:5):(i===0?-11:11)),y=v.y+(side?(i===0?-10:7):1);g.x=x;g.y=y;seatedPerson(g,x,y,side?.55:.62);});}if(v.queue&&v.queue.length){ctx.save();ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+v.queue.length,v.x,v.y+65);ctx.restore();}}})),
   ...guests.filter(g=>g.mode!=='riding'&&g.mode!=='benchRest'&&!(g.mode==='vendorService'&&['bathroom','shirts'].includes(g.vendor?.type))).map(g=>({y:performance.now()<(g.frontUntil||0)?H+100:g.y+16,draw:()=>person(g)}))
 ];
 scene.sort((a,b)=>a.y-b.y).forEach(item=>item.draw());
