@@ -153,13 +153,13 @@ function pathCenter(p){return {x:p.x+T/2,y:p.y+T/2};}
 function nearestPath(x,y){let best=null,d=Infinity;for(const p of pathTiles){const c=pathCenter(p),v=Math.hypot(c.x-x,c.y-y);if(v<d&&freeTarget(c.x,c.y)){best=c;d=v;}}return best;}
 function pathNeighbor(x,y){const nearby=pathTiles.map(pathCenter).filter(p=>Math.hypot(p.x-x,p.y-y)<T*1.1&&freeTarget(p.x,p.y));return nearby.length?nearby[Math.floor(Math.random()*nearby.length)]:null;}
 function wanderTarget(g){
- // Choose a short walk along the path, not a random adjacent tile every time.
- // Remember the previous tile so guests don't immediately reverse direction.
+ // Exploration follows connected path tiles rather than cutting across grass.
  if(pathTiles.length){
-  const current=nearestPath(g.x,g.y);
-  if(current&&Math.hypot(current.x-g.x,current.y-g.y)<T*1.5){
-   let p=current,previous=g.lastWanderPath||null;
-   const steps=2+Math.floor(Math.random()*4);
+  const start=nearestPath(g.x,g.y);
+  if(start){
+   const points=[],previousStart=g.lastWanderPath||null;
+   let p=start,previous=previousStart;
+   const steps=3+Math.floor(Math.random()*4);
    for(let n=0;n<steps;n++){
     const options=pathTiles.map(pathCenter).filter(q=>
       Math.abs(q.x-p.x)+Math.abs(q.y-p.y)===T&&freeTarget(q.x,q.y));
@@ -167,13 +167,22 @@ function wanderTarget(g){
     const choices=forward.length?forward:options;
     if(!choices.length)break;
     const next=choices[Math.floor(Math.random()*choices.length)];
-    previous=p;p=next;
+    points.push(next);previous=p;p=next;
    }
-   if(Math.hypot(p.x-g.x,p.y-g.y)>5){
-    g.lastWanderPath=previous;g.tx=p.x;g.ty=p.y;g.route=null;return;
+   // Walk onto the nearest path, then visit each connected tile in order.
+   // Only connect to the path directly if that approach is unobstructed.
+   if(Math.hypot(g.x-start.x,g.y-start.y)>3)points.unshift(start);
+   if(points.length){
+    g.lastWanderPath=previous;
+    g.tx=points[points.length-1].x;g.ty=points[points.length-1].y;
+    g.route={tx:g.tx,ty:g.ty,points:points.map(p=>({x:p.x,y:p.y})),escape:false};
+    return;
    }
+   // A single isolated path tile is still preferable to wandering onto grass.
+   g.tx=start.x;g.ty=start.y;g.route=null;return;
   }
  }
+ // No usable path exists yet: permit normal grass exploration.
  for(let i=0;i<35;i++){
   const x=rand(30,W-30),y=rand(90,H-35);
   if(freeTarget(x,y)){g.tx=x;g.ty=y;g.route=null;return;}
