@@ -270,16 +270,24 @@ function drawBirdShow(a){
  ctx.translate(a.x,a.y);ctx.scale(.65,.65);ctx.translate(-a.x,-a.y);
  // All scenery is separate from the guests: the seats contain NO painted-in people.
  im('stage_and_trees',a.x-143,a.y-220,286,140);
- const t=a.mode==='riding'?a.rideTime:0;
- const phase=(t%8)/8;
- // Red flies arm -> left perch; blue flies right perch -> arm; then swap back.
- const fly=(name,perched,from,to,p)=>{const k=Math.max(0,Math.min(1,p));const x=from.x+(to.x-from.x)*k,y=from.y+(to.y-from.y)*k-24*Math.sin(Math.PI*k);if(k>0&&k<1)im(name,x-18,y-18,36,34);else im(perched,x-10,y-15,20,29);};
- const left={x:a.x-90,y:a.y-172},right={x:a.x+91,y:a.y-172},arm={x:a.x+13,y:a.y-144};
- const first=phase<.5?phase*2:2-phase*2;
- const second=phase<.5?Math.max(0,Math.min(1,(phase-.16)*3)):Math.max(0,Math.min(1,(.84-phase)*3));
- im('trainer_arm',a.x-16,a.y-164,34,55);
- fly('bird_red_flying','bird_red_perched',arm,left,first);
- fly('bird_blue_flying','bird_blue_perched',right,arm,second);
+ // Birds take turns: red to left tree, blue to trainer, blue home, red home.
+ // Landing positions are at the inner tips of the two actual wooden branches.
+ const t=a.mode==='riding'?a.rideTime%20:0;
+ const left={x:a.x-54,y:a.y-148},right={x:a.x+54,y:a.y-148},arm={x:a.x+19,y:a.y-117};
+ const lerp=(u,v,k)=>({x:u.x+(v.x-u.x)*k,y:u.y+(v.y-u.y)*k-19*Math.sin(Math.PI*k)});
+ const step=(time,begin,duration)=>Math.max(0,Math.min(1,(time-begin)/duration));
+ let red=arm,blue=right,redFlying=false,blueFlying=false;
+ if(a.mode==='riding'){
+  if(t<5){const k=step(t,0,4);red=lerp(arm,left,k);redFlying=k>0&&k<1;}
+  else if(t<10){red=left;const k=step(t,5,4);blue=lerp(right,arm,k);blueFlying=k>0&&k<1;}
+  else if(t<15){red=left;const k=step(t,10,4);blue=lerp(arm,right,k);blueFlying=k>0&&k<1;}
+  else {blue=right;const k=step(t,15,4);red=lerp(left,arm,k);redFlying=k>0&&k<1;}
+ }
+ // Widen the trainer slightly, without enlarging the whole show.
+ im('trainer_arm',a.x-21,a.y-164,44,55);
+ const bird=(color,pos,flying)=>{const name='bird_'+color+'_'+(flying?'flying':'perched');const w=flying?38:26,h=flying?33:33;im(name,pos.x-w/2,pos.y-h*.64,w,h);};
+ bird('red',red,redFlying);
+ bird('blue',blue,blueFlying);
  // Only existing visitors' BACK-FACING HEAD sprites are drawn in the bleachers.
  im('bleachers_empty',a.x-103,a.y-83,206,83);
  a.riders.forEach((g,i)=>{if(!g)return;const [headName]=visitorParts(g),part=visitorSprites.heads[headName+'_back'];if(!part?.box)return;const row=Math.floor(i/4),col=i%4;const x=a.x-66+col*44,y=a.y-69+row*19;const [sx,sy,sw,sh]=part.box;ctx.drawImage(part.im,sx,sy,sw,sh,x-8,y-12,16,14);});
