@@ -273,21 +273,31 @@ function drawBirdShow(a){
  // Birds take turns: red to left tree, blue to trainer, blue home, red home.
  // Landing positions are at the inner tips of the two actual wooden branches.
  const t=a.mode==='riding'?a.rideTime%20:0;
- const left={x:a.x-54,y:a.y-148},right={x:a.x+54,y:a.y-148},arm={x:a.x+19,y:a.y-117};
- const lerp=(u,v,k)=>({x:u.x+(v.x-u.x)*k,y:u.y+(v.y-u.y)*k-19*Math.sin(Math.PI*k)});
+ // Landing coordinates refer to the birds' FEET, not their centers.
+ // Tree branches sit above the stage; the trainer's hand is lower.
+ const left={x:a.x-55,y:a.y-165},right={x:a.x+55,y:a.y-165},arm={x:a.x+23,y:a.y-132};
+ const lerp=(u,v,k)=>({x:u.x+(v.x-u.x)*k,y:u.y+(v.y-u.y)*k-22*Math.sin(Math.PI*k)});
  const step=(time,begin,duration)=>Math.max(0,Math.min(1,(time-begin)/duration));
- let red=arm,blue=right,redFlying=false,blueFlying=false;
+ let red=arm,blue=right,redFlying=false,blueFlying=false,redDx=0,blueDx=0;
  if(a.mode==='riding'){
-  if(t<5){const k=step(t,0,4);red=lerp(arm,left,k);redFlying=k>0&&k<1;}
-  else if(t<10){red=left;const k=step(t,5,4);blue=lerp(right,arm,k);blueFlying=k>0&&k<1;}
-  else if(t<15){red=left;const k=step(t,10,4);blue=lerp(arm,right,k);blueFlying=k>0&&k<1;}
-  else {blue=right;const k=step(t,15,4);red=lerp(left,arm,k);redFlying=k>0&&k<1;}
+  if(t<5){const k=step(t,0,4);red=lerp(arm,left,k);redFlying=k>0&&k<1;redDx=-1;}
+  else if(t<10){red=left;const k=step(t,5,4);blue=lerp(right,arm,k);blueFlying=k>0&&k<1;blueDx=-1;}
+  else if(t<15){red=left;const k=step(t,10,4);blue=lerp(arm,right,k);blueFlying=k>0&&k<1;blueDx=1;}
+  else {blue=right;const k=step(t,15,4);red=lerp(left,arm,k);redFlying=k>0&&k<1;redDx=1;}
  }
- // Widen the trainer slightly, without enlarging the whole show.
+ // Keep the trainer wide enough to match the visitors.
  im('trainer_arm',a.x-21,a.y-164,44,55);
- const bird=(color,pos,flying)=>{const name='bird_'+color+'_'+(flying?'flying':'perched');const w=flying?38:26,h=flying?33:33;im(name,pos.x-w/2,pos.y-h*.64,w,h);};
- bird('red',red,redFlying);
- bird('blue',blue,blueFlying);
+ const bird=(color,pos,flying,dx)=>{
+  const name='bird_'+color+'_'+(flying?'flying':'perched');
+  const w=flying?38:26,h=flying?33:33;
+  ctx.save();
+  if(flying&&dx<0){ctx.translate(pos.x,0);ctx.scale(-1,1);ctx.translate(-pos.x,0);}
+  // Bottom of the sprite is the perch/hand contact point.
+  im(name,pos.x-w/2,pos.y-h,w,h);
+  ctx.restore();
+ };
+ bird('red',red,redFlying,redDx);
+ bird('blue',blue,blueFlying,blueDx);
  // Only existing visitors' BACK-FACING HEAD sprites are drawn in the bleachers.
  im('bleachers_empty',a.x-103,a.y-83,206,83);
  a.riders.forEach((g,i)=>{if(!g)return;const [headName]=visitorParts(g),part=visitorSprites.heads[headName+'_back'];if(!part?.box)return;const row=Math.floor(i/4),col=i%4;const x=a.x-66+col*44,y=a.y-69+row*19;const [sx,sy,sw,sh]=part.box;ctx.drawImage(part.im,sx,sy,sw,sh,x-8,y-12,16,14);});
