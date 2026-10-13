@@ -66,8 +66,8 @@ const holidayType=t=>Object.prototype.hasOwnProperty.call(holidayDecor,t);
 const holidayImages={};for(const [id,item] of Object.entries(holidayDecor)){const im=new Image();im.onload=()=>{const ratio=im.naturalWidth/im.naturalHeight;if(!isFinite(ratio)||ratio<=0)return;// Consistent object scale, anchored to the approved elephant statue (58 x 52).
  const limits={holiday_dead_tree:[68,82],holiday_elephant:[58,52],holiday_peacock:[37,44],holiday_jackolantern:[17,17],holiday_flowers:[18,12],holiday_cauldron:[21,18],holiday_pumpkins:[25,26],holiday_wheelbarrow:[40,29]};const [maxW,maxH]=limits[id]||[25,25];const scale=Math.min(maxW/im.naturalWidth,maxH/im.naturalHeight);item.w=Math.max(8,Math.round(im.naturalWidth*scale));item.h=Math.max(8,Math.round(im.naturalHeight*scale));};im.src='sprites/decor/'+encodeURIComponent(item.file);holidayImages[id]=im;}
 const rideDetails={carousel:{name:'Carousel',style:'Classic',relief:{boredom:40,exhaustion:25}},drop_tower:{name:'Drop Tower',style:'Classic',relief:{boredom:50}},bird_show:{name:'Bird Show',style:'Safari',relief:{exhaustion:100,boredom:15}}};
-function buildDetails(type){if(holidayType(type))return {name:holidayDecor[type].name,style:'Holiday',relief:{}};const v=vendorTypes[type];const d=v?{name:v.name,style:'Classic',relief:{[v.stat]:Math.abs(v.amount)}}:rideDetails[type];return d||{name:type,style:'Classic',relief:{}};}
-function reliefText(type){return Object.entries(buildDetails(type).relief).map(([key,value])=>key[0].toUpperCase()+key.slice(1)+' −'+value).join(' · ');}
+function buildDetails(type){if(holidayType(type))return {name:holidayDecor[type].name,style:'Holiday',relief:{}};const v=vendorTypes[type];const d=v?{name:v.name,style:'Classic',relief:{[v.stat]:Math.abs(v.amount)},bladderIncrease:type==='coffee'?30:type==='lemonade'?10:0}:rideDetails[type];return d||{name:type,style:'Classic',relief:{}};}
+function reliefText(type){const d=buildDetails(type);return Object.entries(d.relief).map(([key,value])=>key[0].toUpperCase()+key.slice(1)+' −'+value).join(' · ')+(d.bladderIncrease?' · Bladder +'+d.bladderIncrease:'');}
 const benchType=t=>t==='bench_front'||t==='bench_side';const vendorImages={};for(const id of Object.keys(vendorTypes)){const im=new Image();im.src='sprites/vendors/vendor_'+id+'.png';vendorImages[id]=im;}vendorImages.bench_front.src='sprites/decor/bench_front_wooden.png';vendorImages.bench_side.src='sprites/decor/bench_side_wooden.png';const dirtImage=new Image();dirtImage.src='sprites/paths/path_dirt.png';let selectedBuild='carousel',removePaths=false,selectedStructure=null;
 let activeShop='rides',activeSubcategory={rides:'gentle',vendors:'food',paths:'natural',decor:'plants'};
 const shopCategories={
@@ -398,10 +398,13 @@ function footprintsOverlap(a,b){return a.l<b.r&&a.r>b.l&&a.t<b.b&&a.b>b.t;}
 function validMove(item,type,x,y){
  const bounds=buildingFootprint(item,x,y);
  if(bounds.l<0||bounds.r>W||bounds.t<0||bounds.b>H)return false;
- if(item.type==='bird_show'&&y<150)return false;
- if(item.type==='drop_tower'&&y<275)return false; // Keep the tall sprite inside the map.
- if(item.type==='carousel'&&y<175)return false;
- if(item.type!=='carousel'&&item.type!=='drop_tower'&&item.type!=='bird_show'&&y<110)return false;
+ // Only reserve enough room for the visible art at the top of the park.
+ const topExtent=item.type==='drop_tower'?255:item.type==='bird_show'?145:item.type==='carousel'?82:0;
+ if(y-topExtent<0)return false;
+ 
+ 
+ 
+ 
  const gate={l:GATE_X-100,r:GATE_X+100,t:H-120,b:H};
  if(footprintsOverlap(bounds,gate))return false;
  return ![...attractions,...vendors].some(other=>other!==item&&footprintsOverlap(bounds,buildingFootprint(other)));
