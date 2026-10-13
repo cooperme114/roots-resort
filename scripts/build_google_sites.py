@@ -34,10 +34,10 @@ function EmbeddedImage() {
 """.replace("__ASSETS__", json.dumps(assets, separators=(",", ":")))
 if "<script>" not in source:
     raise RuntimeError("Could not find the game's script tag")
-source = source.replace("<script>", "<script>\\n" + bootstrap + "\\n", 1)
+source = source.replace("<script>", "<script>\n" + bootstrap + "\n", 1)
 source = source.replace("new Image()", "new EmbeddedImage()")
 # The helper itself must create a native image, not call itself recursively.
-source = source.replace("function EmbeddedImage() {\\n  const im = new EmbeddedImage();", "function EmbeddedImage() {\\n  const im = new Image();")
+source = source.replace("function EmbeddedImage() {\n  const im = new EmbeddedImage();", "function EmbeddedImage() {\n  const im = new Image();")
 # Shop previews are created using HTML strings rather than Image.src setters.
 source = source.replace("'<div class=\"shop-preview\"><img src=\"'+src+'", "'<div class=\"shop-preview\"><img src=\"'+embedAsset(src)+'")
 output = root / "google-sites" / "embed-code.txt"
