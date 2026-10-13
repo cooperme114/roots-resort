@@ -152,15 +152,15 @@ function chooseActivity(g){
   {key:'bladder',vendors:vendors.filter(v=>v.type==='bathroom')},
   {key:'hunger',vendors:vendors.filter(v=>v.type==='burgers')},
   {key:'thirst',vendors:vendors.filter(v=>v.type==='lemonade')},
-  {key:'exhaustion',rides:attractions},
+  {key:'exhaustion',rides:attractions.filter(a=>a.type==='carousel')},
   {key:'boredom',rides:attractions,vendors:vendors.filter(v=>v.type==='shirts')}
  ].sort((a,b)=>g[b.key]-g[a.key]);
  for(const need of needs){
   if(g[need.key]<8)break;
   const options=[
-   ...(need.vendors||[]).map(v=>({kind:'vendor',item:v,d:Math.hypot(g.x-v.x,g.y-v.y)+(v.queue?.length||0)*12})),
-   ...(need.rides||[]).filter(a=>a.queue.length<12).map(a=>({kind:'ride',item:a,d:Math.hypot(g.x-a.x,g.y-a.y)+a.queue.length*18}))
-  ].sort((a,b)=>a.d-b.d);
+   ...(need.vendors||[]).map(v=>({kind:'vendor',item:v,relief:Math.min(g[need.key],Math.abs(vendorTypes[v.type].amount)),distance:Math.hypot(g.x-v.x,v.y-g.y),wait:(v.queue?.length||0)*10+(v.serving?10:0)})),
+   ...(need.rides||[]).filter(a=>a.queue.length<12).map(a=>({kind:'ride',item:a,relief:Math.min(g[need.key],need.key==='exhaustion'?25:a.type==='drop_tower'?50:40),distance:Math.hypot(g.x-a.x,g.y-a.y),wait:a.queue.length*(a.type==='drop_tower'?11:13)/(a.riders.length||4)}))
+  ].sort((a,b)=>(b.relief-a.relief)*4+(a.distance-b.distance)*.035+(a.wait-b.wait)*.6);
   if(!options.length)continue;
   const best=options[0];
   if(best.kind==='vendor')sendToVendor(g,best.item);
