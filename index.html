@@ -328,7 +328,21 @@ function coasterCurve(t){const n=coasterLoop.length-1,z=((t%1)+1)%1*n,i=Math.flo
 const coasterSamples=Array.from({length:1501},(_,i)=>coasterCurve(i/1500));let coasterLength=0;const coasterDistances=[0];for(let i=1;i<coasterSamples.length;i++){coasterLength+=Math.hypot(coasterSamples[i].x-coasterSamples[i-1].x,coasterSamples[i].y-coasterSamples[i-1].y);coasterDistances.push(coasterLength);}
 function coasterPosition(distance){const d=((distance%coasterLength)+coasterLength)%coasterLength;let lo=0,hi=coasterDistances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(coasterDistances[mid]<d)lo=mid;else hi=mid;}const span=coasterDistances[hi]-coasterDistances[lo]||1,k=(d-coasterDistances[lo])/span,p=coasterSamples[lo],q=coasterSamples[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
 // Select from all seventeen supplied car angles; direction is measured on screen.
-function coasterCarSprite(dx,dy){const angle=(Math.atan2(dy,dx)+2*Math.PI)%(2*Math.PI);return Math.round(angle/(2*Math.PI)*17)%17;}
+// Car art is not ordered by angle: 01/02 are rear, 03/04 side,
+// 05-12 diagonal and 13-17 steep. Choose the correct artwork by heading.
+function coasterCarSprite(dx,dy){
+ const angle=Math.atan2(dy,dx)*180/Math.PI;
+ // Moving right/left along the horizontal bottom straight.
+ if(angle>=-22.5&&angle<22.5)return 2; // car_03
+ if(angle>=157.5||angle< -157.5)return 3; // car_04
+ // Down-right, down-left, up-left, up-right diagonals.
+ if(angle>=22.5&&angle<67.5)return 4; // car_05
+ if(angle>=67.5&&angle<112.5)return 0; // car_01
+ if(angle>=112.5&&angle<157.5)return 5; // car_06
+ if(angle>=-157.5&&angle< -112.5)return 8; // car_09
+ if(angle>=-112.5&&angle< -67.5)return 1; // car_02
+ return 9; // car_10 (up-right)
+}
 function drawMountainCoaster(a){const w=560,h=330,left=a.x-w/2,top=a.y-h+12;ctx.save();ctx.imageSmoothingEnabled=false;if(coasterTrack.complete&&coasterTrack.naturalWidth)ctx.drawImage(coasterTrack,left,top,w,h);
 // Each two-person car follows the rails at a fixed short distance behind its leader.
 const length=coasterLength;const stationDistance=0,headDistance=a.mode==='riding'?stationDistance-(a.rideTime/18)*length:stationDistance;
