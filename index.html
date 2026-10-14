@@ -324,6 +324,36 @@ const coasterLoop=[[330,904],[230,902],[145,898],[83,873],[62,827],[75,778],[130
 function coasterCurve(t){const n=coasterLoop.length-1,z=((t%1)+1)%1*n,i=Math.floor(z),u=z-i;const p0=coasterLoop[(i-1+n)%n],p1=coasterLoop[i],p2=coasterLoop[(i+1)%n],p3=coasterLoop[(i+2)%n];const blend=(a,b,c,d)=>.5*((2*b)+(-a+c)*u+(2*a-5*b+4*c-d)*u*u+(-a+3*b-3*c+d)*u*u*u);return {x:blend(p0[0],p1[0],p2[0],p3[0]),y:blend(p0[1],p1[1],p2[1],p3[1])};}
 const coasterSamples=Array.from({length:1501},(_,i)=>coasterCurve(i/1500));let coasterLength=0;const coasterDistances=[0];for(let i=1;i<coasterSamples.length;i++){coasterLength+=Math.hypot(coasterSamples[i].x-coasterSamples[i-1].x,coasterSamples[i].y-coasterSamples[i-1].y);coasterDistances.push(coasterLength);}
 function coasterPosition(distance){const d=((distance%coasterLength)+coasterLength)%coasterLength;let lo=0,hi=coasterDistances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(coasterDistances[mid]<d)lo=mid;else hi=mid;}const span=coasterDistances[hi]-coasterDistances[lo]||1,k=(d-coasterDistances[lo])/span,p=coasterSamples[lo],q=coasterSamples[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
+// Sample the actual brown rails in the supplied artwork instead of following the silhouette.
+// The hand-marked loop is only a guide; pixels determine the final position.
+let coasterRailCache=null,coasterRailImage=null;
+function coasterRailPoints(){
+ if(!coasterTrack.complete||!coasterTrack.naturalWidth)return null;
+ if(coasterRailImage===coasterTrack&&coasterRailCache)return coasterRailCache;
+ const c=document.createElement('canvas');c.width=coasterTrack.naturalWidth;c.height=coasterTrack.naturalHeight;
+ const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(coasterTrack,0,0,c.width,c.height);
+ let pixels;try{pixels=g.getImageData(0,0,c.width,c.height).data;}catch(e){return null;}
+ const w=c.width,h=c.height,points=[];
+ // Map guide points into the real sprite's pixel dimensions, then search the
+ // nearby artwork for the brown center between the dark steel rails.
+ for(let i=0;i<coasterSamples.length;i++){
+  const p=coasterSamples[i],cx=p.x/1536*w,cy=p.y/960*h;
+  let best=-1,bx=cx,by=cy;
+  for(let dy=-38;dy<=38;dy+=3)for(let dx=-38;dx<=38;dx+=3){
+   const xx=Math.round(cx+dx),yy=Math.round(cy+dy);if(xx<0||xx>=w||yy<0||yy>=h)continue;
+   const j=(yy*w+xx)*4,r=pixels[j],gr=pixels[j+1],b=pixels[j+2],alpha=pixels[j+3];
+   if(alpha<160||r<65||r>225||gr<35||gr>170||b>gr*.94||r<gr*1.22)continue;
+   const score=4*(r-gr)+.65*gr-1.25*Math.hypot(dx,dy);
+   if(score>best){best=score;bx=xx;by=yy;}
+  }
+  points.push({x:best<0?cx:bx,y:best<0?cy:by});
+ }
+ // Keep neighboring cars on a smooth continuous centerline, even on tight turns.
+ const smoothed=points.map((p,i)=>{let x=0,y=0,total=0;for(let k=-3;k<=3;k++){const q=points[(i+k+points.length)%points.length],weight=4-Math.abs(k);x+=q.x*weight;y+=q.y*weight;total+=weight;}return {x:x/total,y:y/total};});
+ let length=0;const distances=[0];for(let i=1;i<smoothed.length;i++){length+=Math.hypot(smoothed[i].x-smoothed[i-1].x,smoothed[i].y-smoothed[i-1].y);distances.push(length);}
+ coasterRailImage=coasterTrack;coasterRailCache={points:smoothed,distances,length,w,h};return coasterRailCache;
+}
+function coasterRailPosition(distance){const rail=coasterRailPoints();if(!rail)return null;const d=((distance%rail.length)+rail.length)%rail.length;let lo=0,hi=rail.distances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(rail.distances[mid]<d)lo=mid;else hi=mid;}const span=rail.distances[hi]-rail.distances[lo]||1,k=(d-rail.distances[lo])/span,p=rail.points[lo],q=rail.points[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
 function coasterCarSprite(dx,dy){const angle=Math.atan2(dy,dx);if(angle>-Math.PI/8&&angle<=Math.PI/8)return 2; // right
 if(angle>7*Math.PI/8||angle<=-7*Math.PI/8)return 3; // left
 if(angle>3*Math.PI/8&&angle<=5*Math.PI/8)return 0; // toward viewer
@@ -334,8 +364,8 @@ if(angle<0&&angle>=-3*Math.PI/8)return 6;
 return 7;}
 function drawMountainCoaster(a){const w=560,h=330,left=a.x-w/2,top=a.y-h+12;ctx.save();ctx.imageSmoothingEnabled=false;if(coasterTrack.complete&&coasterTrack.naturalWidth)ctx.drawImage(coasterTrack,left,top,w,h);
 // Each two-person car follows the rails at a fixed short distance behind its leader.
-const stationDistance=coasterLength*.02,headDistance=a.mode==='riding'?stationDistance+(a.rideTime/18)*coasterLength:stationDistance;
-for(let i=3;i>=0;i--){const p=coasterPosition(headDistance-i*42),x=left+p.x/1536*w,y=top+(p.y-48)/960*h;const spriteDirection=coasterCarSprite(-p.dx,-p.dy);const im=coasterCars[spriteDirection];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x-12,y-12,24,20);else{ctx.fillStyle='#e33d2f';ctx.fillRect(x-10,y-7,20,12);}const g1=a.riders[i*2],g2=a.riders[i*2+1];if(g1)seatedPerson(g1,x-4,y-8,.28);if(g2)seatedPerson(g2,x+4,y-8,.28);}
+const rail=coasterRailPoints(),length=rail?.length||coasterLength;const stationDistance=length*.02,headDistance=a.mode==='riding'?stationDistance+(a.rideTime/18)*length:stationDistance;
+for(let i=3;i>=0;i--){const p=rail?coasterRailPosition(headDistance-i*42):coasterPosition(headDistance-i*42),x=left+p.x/(rail?.w||1536)*w,y=top+p.y/(rail?.h||960)*h;const spriteDirection=coasterCarSprite(-p.dx,-p.dy);const im=coasterCars[spriteDirection];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x-12,y-12,24,20);else{ctx.fillStyle='#e33d2f';ctx.fillRect(x-10,y-7,20,12);}const g1=a.riders[i*2],g2=a.riders[i*2+1];if(g1)seatedPerson(g1,x-4,y-8,.28);if(g2)seatedPerson(g2,x+4,y-8,.28);}
 if(a.queue.length){ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,a.x-225,a.y+58);}ctx.restore();}
 function drawDropTower(a){ctx.save();const pole=a.style==='Halloween'?dropPoleHalloween:dropPole,car=a.style==='Halloween'?dropCarHalloween:dropCar;if(pole.complete&&pole.naturalWidth)ctx.drawImage(pole,a.x-(a.style==='Halloween'?54:80),a.y-268,a.style==='Halloween'?108:160,310);else{ctx.fillStyle='#6c7783';ctx.fillRect(a.x-12,a.y-265,24,290);}const t=a.mode==='riding'?a.rideTime:0;const rise=Math.max(0,Math.min(1,t<4?t/4:t<5.2?1:t<6.4?1-(t-5.2)/1.2:0));const cy=a.y-25-rise*177;const cw=47,ch=55;const left=a.x-cw/2,top=cy-28;if(car.complete&&car.naturalWidth)ctx.drawImage(car,left,top,cw,ch);else{ctx.fillStyle='#b94336';ctx.fillRect(left,cy+5,cw,18);}for(let i=0;i<4;i++){const g=a.riders[i];if(!g)continue;const gx=left+8+i*10.4;if(!drawVisitorSprite(g,gx,top+40,.33,'front')){ctx.fillStyle=g.shirt;ctx.fillRect(gx-3,top+36,6,6);head(g,gx,top+31,.32);}}
 ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';if(a.queue.length)ctx.fillText('Queue: '+a.queue.length,a.x,a.y+70);ctx.restore();}
