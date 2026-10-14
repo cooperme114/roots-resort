@@ -324,8 +324,10 @@ const coasterLoop=[[330,904],[230,902],[145,898],[83,873],[62,827],[75,778],[130
 function coasterCurve(t){const n=coasterLoop.length-1,z=((t%1)+1)%1*n,i=Math.floor(z),u=z-i;const p0=coasterLoop[(i-1+n)%n],p1=coasterLoop[i],p2=coasterLoop[(i+1)%n],p3=coasterLoop[(i+2)%n];const blend=(a,b,c,d)=>.5*((2*b)+(-a+c)*u+(2*a-5*b+4*c-d)*u*u+(-a+3*b-3*c+d)*u*u*u);return {x:blend(p0[0],p1[0],p2[0],p3[0]),y:blend(p0[1],p1[1],p2[1],p3[1])};}
 const coasterSamples=Array.from({length:1501},(_,i)=>coasterCurve(i/1500));let coasterLength=0;const coasterDistances=[0];for(let i=1;i<coasterSamples.length;i++){coasterLength+=Math.hypot(coasterSamples[i].x-coasterSamples[i-1].x,coasterSamples[i].y-coasterSamples[i-1].y);coasterDistances.push(coasterLength);}
 function coasterPosition(distance){const d=((distance%coasterLength)+coasterLength)%coasterLength;let lo=0,hi=coasterDistances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(coasterDistances[mid]<d)lo=mid;else hi=mid;}const span=coasterDistances[hi]-coasterDistances[lo]||1,k=(d-coasterDistances[lo])/span,p=coasterSamples[lo],q=coasterSamples[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
-// Sample the actual brown rails in the supplied artwork instead of following the silhouette.
-// The hand-marked loop is only a guide; pixels determine the final position.
+// Build ONE continuous rail centerline. Never snap individual frames to pixels:
+// independent color searches jumped between wooden ties, rocks, and rails.
+// The guide curve is refined by sampling ONLY perpendicular to its direction,
+// and the correction is smoothed around the entire circuit.
 let coasterRailCache=null,coasterRailImage=null;
 function coasterRailPoints(){
  if(!coasterTrack.complete||!coasterTrack.naturalWidth)return null;
@@ -333,25 +335,30 @@ function coasterRailPoints(){
  const c=document.createElement('canvas');c.width=coasterTrack.naturalWidth;c.height=coasterTrack.naturalHeight;
  const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(coasterTrack,0,0,c.width,c.height);
  let pixels;try{pixels=g.getImageData(0,0,c.width,c.height).data;}catch(e){return null;}
- const w=c.width,h=c.height,points=[];
- // Map guide points into the real sprite's pixel dimensions, then search the
- // nearby artwork for the brown center between the dark steel rails.
- for(let i=0;i<coasterSamples.length;i++){
-  const p=coasterSamples[i],cx=p.x/1536*w,cy=p.y/960*h;
-  let best=-1,bx=cx,by=cy;
-  for(let dy=-38;dy<=38;dy+=3)for(let dx=-38;dx<=38;dx+=3){
-   const xx=Math.round(cx+dx),yy=Math.round(cy+dy);if(xx<0||xx>=w||yy<0||yy>=h)continue;
-   const j=(yy*w+xx)*4,r=pixels[j],gr=pixels[j+1],b=pixels[j+2],alpha=pixels[j+3];
-   if(alpha<160||r<65||r>225||gr<35||gr>170||b>gr*.94||r<gr*1.22)continue;
-   const score=4*(r-gr)+.65*gr-1.25*Math.hypot(dx,dy);
-   if(score>best){best=score;bx=xx;by=yy;}
+ const w=c.width,h=c.height,n=coasterSamples.length;
+ const guide=coasterSamples.map(p=>({x:p.x*w/1536,y:p.y*h/960}));
+ const offsets=[];
+ function brownScore(x,y){const xx=Math.round(x),yy=Math.round(y);if(xx<0||xx>=w||yy<0||yy>=h)return 0;const j=(yy*w+xx)*4,r=pixels[j],gr=pixels[j+1],b=pixels[j+2],a=pixels[j+3];if(a<190||r<75||r>215||gr<38||gr>165||b>gr*.92||r<gr*1.2)return 0;return Math.min(1,(r-gr)/70)*a/255;}
+ // Use a cross-section, not arbitrary 2-D nearest-pixel selection.
+ for(let i=0;i<n;i++){
+  const p=guide[i],before=guide[(i-5+n)%n],after=guide[(i+5)%n],len=Math.hypot(after.x-before.x,after.y-before.y)||1;
+  const nx=-(after.y-before.y)/len,ny=(after.x-before.x)/len;
+  let bestOffset=0,best=-Infinity;
+  for(let offset=-27;offset<=27;offset+=2){
+   let score=0;
+   // Average brown along the track's tangent: ties and individual pixels
+   // cannot make the cars abruptly jump sideways.
+   for(let t=-9;t<=9;t+=3){const x=p.x+nx*offset+(after.x-before.x)/len*t,y=p.y+ny*offset+(after.y-before.y)/len*t;score+=brownScore(x,y);}
+   score-=Math.abs(offset)*.045;
+   if(score>best){best=score;bestOffset=offset;}
   }
-  points.push({x:best<0?cx:bx,y:best<0?cy:by});
+  offsets.push(bestOffset);
  }
- // Keep neighboring cars on a smooth continuous centerline, even on tight turns.
- const smoothed=points.map((p,i)=>{let x=0,y=0,total=0;for(let k=-3;k<=3;k++){const q=points[(i+k+points.length)%points.length],weight=4-Math.abs(k);x+=q.x*weight;y+=q.y*weight;total+=weight;}return {x:x/total,y:y/total};});
- let length=0;const distances=[0];for(let i=1;i<smoothed.length;i++){length+=Math.hypot(smoothed[i].x-smoothed[i-1].x,smoothed[i].y-smoothed[i-1].y);distances.push(length);}
- coasterRailImage=coasterTrack;coasterRailCache={points:smoothed,distances,length,w,h};return coasterRailCache;
+ // Wide circular low-pass filter makes the path a single flowing line.
+ const smoothOffsets=offsets.map((_,i)=>{let sum=0,weight=0;for(let k=-30;k<=30;k++){const wt=31-Math.abs(k);sum+=offsets[(i+k+n)%n]*wt;weight+=wt;}return sum/weight;});
+ const points=guide.map((p,i)=>{const before=guide[(i-5+n)%n],after=guide[(i+5)%n],len=Math.hypot(after.x-before.x,after.y-before.y)||1;return {x:p.x-(after.y-before.y)/len*smoothOffsets[i],y:p.y+(after.x-before.x)/len*smoothOffsets[i]};});
+ let length=0;const distances=[0];for(let i=1;i<points.length;i++){length+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);distances.push(length);}
+ coasterRailImage=coasterTrack;coasterRailCache={points,distances,length,w,h};return coasterRailCache;
 }
 function coasterRailPosition(distance){const rail=coasterRailPoints();if(!rail)return null;const d=((distance%rail.length)+rail.length)%rail.length;let lo=0,hi=rail.distances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(rail.distances[mid]<d)lo=mid;else hi=mid;}const span=rail.distances[hi]-rail.distances[lo]||1,k=(d-rail.distances[lo])/span,p=rail.points[lo],q=rail.points[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
 function coasterCarSprite(dx,dy){const angle=Math.atan2(dy,dx);if(angle>-Math.PI/8&&angle<=Math.PI/8)return 2; // right
