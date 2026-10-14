@@ -58,7 +58,7 @@ function makeCarousel(x,y,angle=0){return {x,y,type:'carousel',angle,mode:'board
 function makeBirdShow(x,y){return {x,y,type:'bird_show',mode:'boarding',timer:0,boardTimer:0,rideTime:0,queue:[],riders:Array(12).fill(null),done:0};}
 function makeMountainCoaster(x,y){return {x,y,type:'mountain_coaster',mode:'boarding',timer:0,boardTimer:0,rideTime:0,queue:[],riders:Array(8).fill(null),done:0};}
 function makeDropTower(x,y){return {x,y,type:'drop_tower',angle:0,mode:'boarding',timer:0,boardTimer:0,rideTime:0,queue:[],riders:Array(4).fill(null),done:0};}
-const coasterTrack=new Image();coasterTrack.src='sprites/Mountain_coaster/Mountain_Coaster_Track.png';const coasterCars=Array.from({length:12},(_,i)=>{const im=new Image();im.src='sprites/Mountain_coaster/car_'+String(i+1).padStart(2,'0')+'.png';return im;});
+const coasterTrack=new Image();coasterTrack.src='sprites/Mountain_coaster/Mountain_Coaster_Track.png';const coasterCars=Array.from({length:17},(_,i)=>{const im=new Image();im.src='sprites/Mountain_coaster/car_'+String(i+1).padStart(2,'0')+'.png';return im;});
 const dropPole=new Image();dropPole.src='./sprites/drop_tower/pole.png?v=2';const dropCar=new Image();dropCar.src='./sprites/drop_tower/car.png?v=2';
 const dropPoleHalloween=new Image();dropPoleHalloween.src='./sprites/drop_tower/pole_halloween.png';const dropCarHalloween=new Image();dropCarHalloween.src='./sprites/drop_tower/car_halloween.png';
 const birdShowImages={};for(const name of ['stage_and_trees','bleachers_empty','trainer_idle','trainer_arm','bird_red_perched','bird_red_flying','bird_blue_perched','bird_blue_flying']){const im=new Image();im.src='sprites/bird_show/'+name+'.png';birdShowImages[name]=im;}
@@ -327,14 +327,8 @@ const coasterLoop=[[325,856],[550,856],[800,856],[1040,856],[1220,856],[1290,851
 function coasterCurve(t){const n=coasterLoop.length-1,z=((t%1)+1)%1*n,i=Math.floor(z),u=z-i;const p0=coasterLoop[(i-1+n)%n],p1=coasterLoop[i],p2=coasterLoop[(i+1)%n],p3=coasterLoop[(i+2)%n];const blend=(a,b,c,d)=>.5*((2*b)+(-a+c)*u+(2*a-5*b+4*c-d)*u*u+(-a+3*b-3*c+d)*u*u*u);return {x:blend(p0[0],p1[0],p2[0],p3[0]),y:blend(p0[1],p1[1],p2[1],p3[1])};}
 const coasterSamples=Array.from({length:1501},(_,i)=>coasterCurve(i/1500));let coasterLength=0;const coasterDistances=[0];for(let i=1;i<coasterSamples.length;i++){coasterLength+=Math.hypot(coasterSamples[i].x-coasterSamples[i-1].x,coasterSamples[i].y-coasterSamples[i-1].y);coasterDistances.push(coasterLength);}
 function coasterPosition(distance){const d=((distance%coasterLength)+coasterLength)%coasterLength;let lo=0,hi=coasterDistances.length-1;while(lo+1<hi){const mid=(lo+hi)>>1;if(coasterDistances[mid]<d)lo=mid;else hi=mid;}const span=coasterDistances[hi]-coasterDistances[lo]||1,k=(d-coasterDistances[lo])/span,p=coasterSamples[lo],q=coasterSamples[hi];return {x:p.x+(q.x-p.x)*k,y:p.y+(q.y-p.y)*k,dx:q.x-p.x,dy:q.y-p.y};}
-function coasterCarSprite(dx,dy){const angle=Math.atan2(dy,dx);if(angle>-Math.PI/8&&angle<=Math.PI/8)return 2; // right
-if(angle>7*Math.PI/8||angle<=-7*Math.PI/8)return 3; // left
-if(angle>3*Math.PI/8&&angle<=5*Math.PI/8)return 0; // toward viewer
-if(angle<-3*Math.PI/8&&angle>=-5*Math.PI/8)return 1; // away
-if(angle>0&&angle<=3*Math.PI/8)return 4;
-if(angle>5*Math.PI/8)return 5;
-if(angle<0&&angle>=-3*Math.PI/8)return 6;
-return 7;}
+// Select from all seventeen supplied car angles; direction is measured on screen.
+function coasterCarSprite(dx,dy){const angle=(Math.atan2(dy,dx)+2*Math.PI)%(2*Math.PI);return Math.round(angle/(2*Math.PI)*17)%17;}
 function drawMountainCoaster(a){const w=560,h=330,left=a.x-w/2,top=a.y-h+12;ctx.save();ctx.imageSmoothingEnabled=false;if(coasterTrack.complete&&coasterTrack.naturalWidth)ctx.drawImage(coasterTrack,left,top,w,h);
 // Each two-person car follows the rails at a fixed short distance behind its leader.
 const length=coasterLength;const stationDistance=0,headDistance=a.mode==='riding'?stationDistance-(a.rideTime/18)*length:stationDistance;
