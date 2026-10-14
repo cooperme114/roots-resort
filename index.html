@@ -330,23 +330,33 @@ function coasterPosition(distance){const d=((distance%coasterLength)+coasterLeng
 // Select from all seventeen supplied car angles; direction is measured on screen.
 // Car art is not ordered by angle: 01/02 are rear, 03/04 side,
 // 05-12 diagonal and 13-17 steep. Choose the correct artwork by heading.
-function coasterCarSprite(dx,dy){
- const angle=Math.atan2(dy,dx)*180/Math.PI;
- // Moving right/left along the horizontal bottom straight.
- if(angle>=-22.5&&angle<22.5)return 2; // car_03
- if(angle>=157.5||angle< -157.5)return 3; // car_04
- // Down-right, down-left, up-left, up-right diagonals.
- if(angle>=22.5&&angle<67.5)return 5; // car_06: descending right after crest
- if(angle>=67.5&&angle<112.5)return 0; // car_01
- if(angle>=112.5&&angle<157.5)return 5; // car_06
- if(angle>=-157.5&&angle< -112.5)return 12; // car_13: steep up-right climb
- if(angle>=-112.5&&angle< -67.5)return 1; // car_02
- return 9; // car_10 (up-right)
+// Sprite changes traced from the player's numbered 536x343 track diagram.
+// These are physical checkpoints, NOT guesses based on tangent angle.
+const coasterSpriteMarks=[
+ [240,321,3],[50,320,16],[15,280,2],[50,247,14],
+ [77,203,13],[215,7,4],[241,13,7],[260,51,6],
+ [338,131,14],[375,125,6],[436,154,14],[476,162,7],
+ [519,261,5],[419,317,3]
+];
+const coasterSpriteSections=coasterSpriteMarks.map(([x,y,sprite])=>{
+ const px=x/536*1536,py=y/343*1024;
+ let nearest=0,best=Infinity;
+ for(let i=0;i<coasterSamples.length;i++){
+  const p=coasterSamples[i],d=(p.x-px)**2+(p.y-py)**2;
+  if(d<best){best=d;nearest=i;}
+ }
+ return {distance:(coasterLength-coasterDistances[nearest]+coasterLength)%coasterLength,sprite:sprite-1};
+}).sort((a,b)=>a.distance-b.distance);
+function coasterCarSpriteAt(distance){
+ const progress=(((-distance)%coasterLength)+coasterLength)%coasterLength;
+ let selected=coasterSpriteSections[coasterSpriteSections.length-1].sprite;
+ for(const mark of coasterSpriteSections){if(mark.distance>progress)break;selected=mark.sprite;}
+ return selected;
 }
 function drawMountainCoaster(a){const w=560,h=330,left=a.x-w/2,top=a.y-h+12;ctx.save();ctx.imageSmoothingEnabled=false;if(coasterTrack.complete&&coasterTrack.naturalWidth)ctx.drawImage(coasterTrack,left,top,w,h);
 // Each two-person car follows the rails at a fixed short distance behind its leader.
 const length=coasterLength;const stationDistance=0,headDistance=a.mode==='riding'?stationDistance-(a.rideTime/18)*length:stationDistance;
-for(let i=3;i>=0;i--){const p=coasterPosition(headDistance+i*42),x=left+p.x/1536*w,y=top+p.y/1024*h;const spriteDirection=coasterCarSprite(p.dx,p.dy);const im=coasterCars[spriteDirection];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x-12,y-12,24,20);else{ctx.fillStyle='#e33d2f';ctx.fillRect(x-10,y-7,20,12);}const g1=a.riders[i*2],g2=a.riders[i*2+1];if(g1)seatedPerson(g1,x-4,y-8,.28);if(g2)seatedPerson(g2,x+4,y-8,.28);}
+for(let i=3;i>=0;i--){const p=coasterPosition(headDistance+i*42),x=left+p.x/1536*w,y=top+p.y/1024*h;const spriteDirection=coasterCarSpriteAt(headDistance+i*42);const im=coasterCars[spriteDirection];if(im?.complete&&im.naturalWidth)ctx.drawImage(im,x-12,y-12,24,20);else{ctx.fillStyle='#e33d2f';ctx.fillRect(x-10,y-7,20,12);}const g1=a.riders[i*2],g2=a.riders[i*2+1];if(g1)seatedPerson(g1,x-4,y-8,.28);if(g2)seatedPerson(g2,x+4,y-8,.28);}
 if(a.queue.length){ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,a.x,a.y+58);}ctx.restore();}
 function drawDropTower(a){ctx.save();const pole=a.style==='Halloween'?dropPoleHalloween:dropPole,car=a.style==='Halloween'?dropCarHalloween:dropCar;if(pole.complete&&pole.naturalWidth)ctx.drawImage(pole,a.x-(a.style==='Halloween'?54:80),a.y-268,a.style==='Halloween'?108:160,310);else{ctx.fillStyle='#6c7783';ctx.fillRect(a.x-12,a.y-265,24,290);}const t=a.mode==='riding'?a.rideTime:0;const rise=Math.max(0,Math.min(1,t<4?t/4:t<5.2?1:t<6.4?1-(t-5.2)/1.2:0));const cy=a.y-25-rise*177;const cw=47,ch=55;const left=a.x-cw/2,top=cy-28;if(car.complete&&car.naturalWidth)ctx.drawImage(car,left,top,cw,ch);else{ctx.fillStyle='#b94336';ctx.fillRect(left,cy+5,cw,18);}for(let i=0;i<4;i++){const g=a.riders[i];if(!g)continue;const gx=left+8+i*10.4;if(!drawVisitorSprite(g,gx,top+40,.33,'front')){ctx.fillStyle=g.shirt;ctx.fillRect(gx-3,top+36,6,6);head(g,gx,top+31,.32);}}
 ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';if(a.queue.length)ctx.fillText('Queue: '+a.queue.length,a.x,a.y+70);ctx.restore();}
