@@ -396,7 +396,7 @@ for(const p of pathTiles){if(dirtImage.complete&&dirtImage.naturalWidth)ctx.draw
 // Entrance is a permanent resort fixture; visitors walk through its open arch.
 // Draw by ground position: people behind a carousel are hidden by it,
 // while people walking in front of its base appear in front.
-for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-(a.type==='mountain_coaster'?225:a.type==='bird_show'?101:72)-(i%4)*19;g.y=a.y+(a.type==='mountain_coaster'?38:a.type==='bird_show'?24:a.type==='drop_tower'?65:61)+Math.floor(i/4)*21;g.facing='right';});}
+for(let a of attractions){a.queue.forEach((g,i)=>{g.x=a.x-(a.type==='mountain_coaster'?0:a.type==='bird_show'?101:72)-(i%4)*19;g.y=a.y+(a.type==='mountain_coaster'?38:a.type==='bird_show'?24:a.type==='drop_tower'?65:61)+Math.floor(i/4)*21;g.facing='right';});}
 // All guests waiting in vendor or bench queues face right, just like ride queues.
 for(const v of vendors){for(const g of v.queue||[]){if(g.mode==='toVendor'&&Math.hypot(g.x-(v.x-32-Math.max(0,v.queue.indexOf(g)-1)*27),g.y-(v.y+51))<14)g.facing='right';}}
 const scene=[
