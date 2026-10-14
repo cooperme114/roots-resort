@@ -356,7 +356,7 @@ const coasterSpriteMarks=[
  [436,320,3]
 ];
 const coasterSpriteSections=coasterSpriteMarks.map(([x,y,sprite])=>{
- const px=x/536*1536,py=y/343*1024;
+ const px=72+(x-17)*(1410/513),py=45+(y-5)*(811/315);
  let nearest=0,best=Infinity;
  for(let i=0;i<coasterSamples.length;i++){
   const p=coasterSamples[i],d=(p.x-px)**2+(p.y-py)**2;
