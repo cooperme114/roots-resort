@@ -333,10 +333,27 @@ function coasterPosition(distance){const d=((distance%coasterLength)+coasterLeng
 // Sprite changes traced from the player's numbered 536x343 track diagram.
 // These are physical checkpoints, NOT guesses based on tangent angle.
 const coasterSpriteMarks=[
- [240,321,3],[55,320,16],[38,285,2],[50,247,14],
- [77,203,13],[210,9,4],[232,8,7],[253,34,6],
- [338,131,14],[357,121,4],[375,125,6],[436,154,14],[454,151,4],[476,162,7],
- [519,261,5],[509,289,1],[419,317,3]
+// User's annotated 536x343 coaster map, in travel order.
+// Bottom straight -> left bend -> main hill -> small hills -> right bend.
+ [142,320,3],
+ [65,320,16],
+ [17,286,2],
+ [48,250,14],
+ [80,207,13],
+ [191,20,14],
+ [208,8,4],
+ [225,8,10],
+ [241,13,6],
+ [257,44,7],
+ [308,124,14],
+ [326,130,4],
+ [346,119,7],
+ [383,136,14],
+ [431,159,4],
+ [472,157,7],
+ [517,253,5],
+ [502,286,1],
+ [436,320,3]
 ];
 const coasterSpriteSections=coasterSpriteMarks.map(([x,y,sprite])=>{
  const px=x/536*1536,py=y/343*1024;
