@@ -457,8 +457,21 @@ function drawBirdShow(a){
  ctx.restore();
  if(a.queue.length){ctx.save();ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,a.x,a.y+17);ctx.restore();}
 }
-function draw(){ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-cameraX,-cameraY);ctx.fillStyle='#9acb74';ctx.fillRect(cameraX,cameraY,W,H);for(let y=Math.floor(cameraY/T)*T;y<cameraY+H;y+=T)for(let x=Math.floor(cameraX/T)*T;x<cameraX+W;x+=T){if((x/T+y/T)%2===0){ctx.fillStyle='#ffffff13';ctx.fillRect(x,y,T,T);}}ctx.strokeStyle='#ffffff25';ctx.lineWidth=1;for(let x=Math.floor(cameraX/T)*T;x<=cameraX+W;x+=T){ctx.beginPath();ctx.moveTo(x,cameraY);ctx.lineTo(x,cameraY+H);ctx.stroke();}for(let y=Math.floor(cameraY/T)*T;y<=cameraY+H;y+=T){ctx.beginPath();ctx.moveTo(cameraX,y);ctx.lineTo(cameraX+W,y);ctx.stroke();}
-for(const p of pathTiles){const tileImage=pathImages[p.type]||dirtImage;if(tileImage.complete&&tileImage.naturalWidth)ctx.drawImage(tileImage,p.x,p.y,T,T);else{ctx.fillStyle='#cfa16c';ctx.fillRect(p.x,p.y,T,T);}}
+function syncWaterBackground(){
+ const scale=canvas.getBoundingClientRect().width/W;
+ const px=T*scale;
+ canvas.style.backgroundImage="url('sprites/paths/path_water.gif')";
+ canvas.style.backgroundRepeat='repeat';
+ canvas.style.backgroundSize=px+'px '+px+'px';
+ canvas.style.backgroundPosition=(-cameraX*scale)+'px '+(-cameraY*scale)+'px';
+}
+function draw(){syncWaterBackground();ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);ctx.save();ctx.translate(-cameraX,-cameraY);ctx.fillStyle='#9acb74';ctx.fillRect(cameraX,cameraY,W,H);for(let y=Math.floor(cameraY/T)*T;y<cameraY+H;y+=T)for(let x=Math.floor(cameraX/T)*T;x<cameraX+W;x+=T){if((x/T+y/T)%2===0){ctx.fillStyle='#ffffff13';ctx.fillRect(x,y,T,T);}}ctx.strokeStyle='#ffffff25';ctx.lineWidth=1;for(let x=Math.floor(cameraX/T)*T;x<=cameraX+W;x+=T){ctx.beginPath();ctx.moveTo(x,cameraY);ctx.lineTo(x,cameraY+H);ctx.stroke();}for(let y=Math.floor(cameraY/T)*T;y<=cameraY+H;y+=T){ctx.beginPath();ctx.moveTo(cameraX,y);ctx.lineTo(cameraX+W,y);ctx.stroke();}
+for(const p of pathTiles){
+ if(p.type==='water'){ctx.clearRect(p.x,p.y,T,T);continue;}
+ const tileImage=pathImages[p.type]||dirtImage;
+ if(tileImage.complete&&tileImage.naturalWidth)ctx.drawImage(tileImage,p.x,p.y,T,T);
+ else{ctx.fillStyle='#cfa16c';ctx.fillRect(p.x,p.y,T,T);}
+}
 // Entrance is a permanent resort fixture; visitors walk through its open arch.
 // Draw by ground position: people behind a carousel are hidden by it,
 // while people walking in front of its base appear in front.
