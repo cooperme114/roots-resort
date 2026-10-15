@@ -73,9 +73,11 @@ function drawFerrisWheel(a){
  for(let i=0;i<8;i++){const t=angle+i*Math.PI/4-Math.PI/2,x=cx+Math.cos(t)*R,y=cy+Math.sin(t)*R;const w=43,h=47;const g1=a.riders[i*2],g2=a.riders[i*2+1];if(!sprite('cart_'+colors[i],x-w/2,y-6,w,h)){ctx.fillStyle=colors[i];ctx.fillRect(x-18,y+4,36,22);}
  // Draw heads and upper bodies over the gondola window, not behind its opaque PNG.
  // The bottom half remains hidden by the cabin's front railing.
- ctx.save();ctx.beginPath();ctx.rect(x-17,y+1,34,19);ctx.clip();
- if(g1)drawVisitorSprite(g1,x-8,y+17,.65,'front')||seatedPerson(g1,x-8,y+17,.65);
- if(g2)drawVisitorSprite(g2,x+8,y+17,.65,'front')||seatedPerson(g2,x+8,y+17,.65);
+ ctx.save();
+ // Only the dark cabin window is visible: never draw riders across the striped roof.
+ ctx.beginPath();ctx.rect(x-14,y+13,28,13);ctx.clip();
+ if(g1)seatedPerson(g1,x-7,y+29,.60);
+ if(g2)seatedPerson(g2,x+7,y+29,.60);
  ctx.restore();}
  sprite('wheel_center',cx-17,cy-17,34,34);
  if(a.queue.length){ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,cx,a.y+40);}ctx.restore();
