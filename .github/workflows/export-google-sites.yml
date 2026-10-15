@@ -18,6 +18,17 @@ jobs:
           python-version: '3.12'
       - name: Build self-contained Google Sites HTML
         run: python scripts/build_google_sites.py
+      - name: Compress HTML and JavaScript for Google Sites
+        run: |
+          npx --yes html-minifier-terser@7.2.0 google-sites/embed-code.txt \
+            --collapse-whitespace \
+            --remove-comments \
+            --minify-css true \
+            --minify-js true \
+            --output google-sites/embed-code.min.txt
+          test -s google-sites/embed-code.min.txt
+          mv google-sites/embed-code.min.txt google-sites/embed-code.txt
+          wc -c google-sites/embed-code.txt
       - uses: actions/upload-artifact@v4
         with:
           name: roots-resort-google-sites
