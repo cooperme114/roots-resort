@@ -84,7 +84,7 @@ function drawVikingShip(a){
   const col=i%6,row=Math.floor(i/6);
   const x=-58+col*23.2;
   const rim=120-0.0042*x*x;
-  const y=rim+8-row*2;
+  const y=rim+27-row*2;
   ctx.save();
   // Show the full head and a hint of shoulders; hide the rest behind the hull.
   ctx.beginPath();ctx.rect(x-10,y-23,20,22);ctx.clip();
