@@ -1,0 +1,38 @@
+name: Build Google Sites Embed
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'index.html'
+      - '.github/workflows/build-embed.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Minify HTML for Google Sites
+        run: |
+          npx --yes html-minifier-terser@7.2.0 index.html \
+            --collapse-whitespace \
+            --remove-comments \
+            --minify-css true \
+            --minify-js true \
+            --output embed-code.txt
+          test -s embed-code.txt
+      - name: Commit updated embed code
+        run: |
+          if git diff --quiet -- embed-code.txt && git ls-files --error-unmatch embed-code.txt >/dev/null 2>&1; then
+            echo "Embed code already current"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add embed-code.txt
+          git commit -m "Build minified Google Sites embed"
+          git push
