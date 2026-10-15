@@ -79,7 +79,7 @@ function drawVikingShip(a){
  // Seated riders face inward. Only heads peek over the near hull rim.
  // Render each head from behind (hair and hats, no facial features or torsos).
  for(let i=0;i<a.riders.length;i++){const g=a.riders[i];if(!g)continue;
- const col=i%6,row=Math.floor(i/6),x=-65+col*26,y=106+row*4;
+ const col=i%6,row=Math.floor(i/6),x=-65+col*26,y=120+row*4;
  const radius=5.2;
  ctx.save();ctx.beginPath();ctx.rect(x-9,y-13,18,14);ctx.clip();
  ctx.fillStyle=g.skin||'#e9b28a';ctx.beginPath();ctx.arc(x,y-3,radius,0,Math.PI*2);ctx.fill();
