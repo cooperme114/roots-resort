@@ -84,11 +84,11 @@ function drawVikingShip(a){
   const col=i%6,row=Math.floor(i/6);
   const x=-58+col*23.2;
   const rim=120-0.0042*x*x;
-  const y=rim+27-row*2;
+  const y=rim+32-row*2;
   ctx.save();
   // Show the full head and a hint of shoulders; hide the rest behind the hull.
   ctx.beginPath();ctx.rect(x-10,y-23,20,22);ctx.clip();
-  drawVisitorSprite(g,x,y,.7,'left');
+  drawVisitorSprite(g,x,y,.7,'right');
   ctx.restore();
  }
  ctx.restore();if(a.queue.length){ctx.save();ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,a.x,a.y+43);ctx.restore();}
