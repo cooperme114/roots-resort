@@ -94,8 +94,7 @@ function drawShuttleCoaster(a){
    y=railY-radius-(distance-flatLength-curveLength);
    angle=-Math.PI/2;
  }
- ctx.translate(x,y);ctx.rotate(angle);
- // Four guests in one small car; visitor sprites stay behind the front of the cart.
+ // Raise the car on the flat launch rail, smoothly removing that offset\n // through the bend so the already-correct vertical track alignment stays unchanged.\n const launchLift=9*Math.max(0,Math.cos(-angle));\n ctx.translate(x,y-launchLift);ctx.rotate(angle);\n // Four guests in one small car; visitor sprites stay behind the front of the cart.
  for(let i=0;i<a.riders.length;i++){
    const g=a.riders[i];if(!g)continue;
    ctx.save();ctx.beginPath();ctx.rect(-12+(i%2)*12,-24,12,17);ctx.clip();
