@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Build a single self-contained HTML file for Google Sites Embed code."""
 import base64
+from io import BytesIO
+from PIL import Image
 import json
 import mimetypes
 from pathlib import Path
@@ -8,11 +10,40 @@ from pathlib import Path
 root = Path(__file__).resolve().parents[1]
 source = (root / "index.html").read_text(encoding="utf-8")
 assets = {}
+original_bytes = 0
+embedded_bytes = 0
+
+def optimized_png(data):
+    # Compress only the embedded copy, keeping the original sprite unchanged.
+    try:
+        with Image.open(BytesIO(data)) as image:
+            if image.format != "PNG":
+                return data
+            rgba = image.convert("RGBA")
+            candidates = [data]
+            buffer = BytesIO()
+            rgba.save(buffer, format="PNG", optimize=True, compress_level=9)
+            candidates.append(buffer.getvalue())
+            if len(data) > 30000:
+                palette = rgba.quantize(colors=256, method=Image.Quantize.FASTOCTREE)
+                buffer = BytesIO()
+                palette.save(buffer, format="PNG", optimize=True, compress_level=9)
+                candidates.append(buffer.getvalue())
+            return min(candidates, key=len)
+    except Exception as exc:
+        print(f"Image optimization skipped: {exc}")
+        return data
+
 for path in (root / "sprites").rglob("*"):
     if not path.is_file() or path.suffix.lower() not in (".png", ".gif", ".jpg", ".jpeg", ".webp", ".svg"):
         continue
     mime = mimetypes.guess_type(path.name)[0] or "application/octet-stream"
-    assets[path.relative_to(root).as_posix()] = "data:" + mime + ";base64," + base64.b64encode(path.read_bytes()).decode("ascii")
+    data = path.read_bytes()
+    original_bytes += len(data)
+    if path.suffix.lower() == ".png":
+        data = optimized_png(data)
+    embedded_bytes += len(data)
+    assets[path.relative_to(root).as_posix()] = "data:" + mime + ";base64," + base64.b64encode(data).decode("ascii")
 
 # Resolve both dynamically constructed sprite filenames and URL-encoded spaces.
 bootstrap = """
@@ -44,3 +75,5 @@ output = root / "google-sites" / "embed-code.txt"
 output.parent.mkdir(parents=True, exist_ok=True)
 output.write_text(source, encoding="utf-8")
 print(f"Built {output} ({output.stat().st_size:,} bytes; {len(assets)} sprite assets)")
+
+print(f"Image bytes: {original_bytes:,} original -> {embedded_bytes:,} embedded ({100*(1-embedded_bytes/max(1,original_bytes)):.1f}% smaller)")
