@@ -72,7 +72,8 @@ function drawShuttleCoaster(a){
  ctx.save();ctx.imageSmoothingEnabled=false;
  const track=shuttleSprites.track,cart=shuttleSprites.cart;
  if(track.complete&&track.naturalWidth)ctx.drawImage(track,left,top,w,h);
- // Follow the left-side rail centerline: flat, a smooth quarter-circle, then straight up.\n // Keep the vertical car left of the blue tower support instead of entering its pole.
+ // Follow the left-side rail centerline: flat, a smooth quarter-circle, then straight up.
+ // Keep the vertical car left of the blue tower support instead of entering its pole.
  // The same positions are traversed in reverse on the return trip.
  const duration=9;
  const t=a.mode==='riding'?Math.max(0,Math.min(1,a.rideTime/duration)):0;
@@ -94,7 +95,11 @@ function drawShuttleCoaster(a){
    y=railY-radius-(distance-flatLength-curveLength);
    angle=-Math.PI/2;
  }
- // Raise the car on the flat launch rail, smoothly removing that offset\n // through the bend so the already-correct vertical track alignment stays unchanged.\n const launchLift=9*Math.max(0,Math.cos(-angle));\n ctx.translate(x,y-launchLift);ctx.rotate(angle);\n // Four guests in one small car; visitor sprites stay behind the front of the cart.
+ // Raise the car on the flat launch rail, smoothly removing that offset
+ // through the bend so the already-correct vertical track alignment stays unchanged.
+ const launchLift=9*Math.max(0,Math.cos(-angle));
+ ctx.translate(x,y-launchLift);ctx.rotate(angle);
+ // Four guests in one small car; visitor sprites stay behind the front of the cart.
  for(let i=0;i<a.riders.length;i++){
    const g=a.riders[i];if(!g)continue;
    ctx.save();ctx.beginPath();ctx.rect(-12+(i%2)*12,-24,12,17);ctx.clip();
