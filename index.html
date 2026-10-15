@@ -75,9 +75,9 @@ function drawFerrisWheel(a){
  // The bottom half remains hidden by the cabin's front railing.
  ctx.save();
  // Only the dark cabin window is visible: never draw riders across the striped roof.
- ctx.beginPath();ctx.rect(x-14,y+13,28,13);ctx.clip();
- if(g1)seatedPerson(g1,x-7,y+29,.60);
- if(g2)seatedPerson(g2,x+7,y+29,.60);
+ ctx.beginPath();ctx.rect(x-14,y+17,28,10);ctx.clip();
+ if(g1)seatedPerson(g1,x-7,y+37,.60);
+ if(g2)seatedPerson(g2,x+7,y+37,.60);
  ctx.restore();}
  sprite('wheel_center',cx-17,cy-17,34,34);
  if(a.queue.length){ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,cx,a.y+40);}ctx.restore();
