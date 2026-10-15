@@ -596,7 +596,7 @@ function drawBirdShow(a){
 function syncWaterBackground(){
  const scale=canvas.getBoundingClientRect().width/W;
  const px=T*scale;
- canvas.style.backgroundImage="url('sprites/paths/path_water.gif')";
+ canvas.style.backgroundImage="url("+JSON.stringify(typeof embedAsset==="function"?embedAsset("sprites/paths/path_water.gif"):"sprites/paths/path_water.gif")+")";
  canvas.style.backgroundRepeat='repeat';
  canvas.style.backgroundSize=px+'px '+px+'px';
  canvas.style.backgroundPosition=(-cameraX*scale)+'px '+(-cameraY*scale)+'px';
