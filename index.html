@@ -445,7 +445,7 @@ function moveTo(g,x,y,dt){
   if(!points.length){g.route=null;g.stuckFor=0;return true;}
   let p=points[0],dx=p.x-g.x,dy=p.y-g.y,d=Math.hypot(dx,dy);if(Math.abs(dx)>Math.abs(dy))g.facing=dx>0?'right':'left';else if(Math.abs(dy)>1)g.facing=dy>0?'front':'back';
   let step=Math.min(d,g.speed*dt),nx=g.x+dx/d*step,ny=g.y+dy/d*step;
-  if(freeTarget(nx,ny)&&clearPath({x:g.x,y:g.y},{x:nx,y:ny})||(!freeTarget(g.x,g.y)&&![...vendors].some(v=>fenceType(v.type)&&footprintsOverlap(fenceBounds(v,v.x,v.y),{l:g.x-1,r:g.x+1,t:g.y-1,b:g.y+1})))||(g.route.escape&&clearPath({x:g.x,y:g.y},{x:nx,y:ny}))){g.x=nx;g.y=ny;g.stuckFor=0;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.7);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.65);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
+  if(freeTarget(nx,ny)&&clearPath({x:g.x,y:g.y},{x:nx,y:ny})||(!freeTarget(g.x,g.y)&&![...vendors].some(v=>fenceType(v.type)&&footprintsOverlap(fenceBounds(v,v.x,v.y),{l:g.x-1,r:g.x+1,t:g.y-1,b:g.y+1})))||(g.route.escape&&clearPath({x:g.x,y:g.y},{x:nx,y:ny}))){g.x=nx;g.y=ny;g.stuckFor=0;g.steps+=step;while(g.steps>=24){g.steps-=24;changeNeed(g,'boredom',.8);changeNeed(g,'hunger',.45);changeNeed(g,'thirst',.45);changeNeed(g,'exhaustion',.4);changeNeed(g,'bladder',.35);}}
   else {g.stuckFor=(g.stuckFor||0)+dt;if(g.stuckFor>1.2){g.route={tx:x,ty:y,points:routeAround(g,target),escape:false};g.stuckFor=0;}} /* Preserve the route until escape is needed. */
   return false;
 }
