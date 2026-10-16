@@ -735,5 +735,25 @@ const saveOverlay=$('saveCodeOverlay'),saveText=$('saveCodeText'),saveMessage=$(
 $('restartPark').onclick=restartPark;
 // Visible build identifier so the live GitHub Pages deployment can be verified.
 const buildStamp=document.createElement('span');buildStamp.textContent='Coaster update 19B';buildStamp.style.cssText='position:fixed;bottom:6px;right:8px;background:#173f2c;color:white;font:11px system-ui;padding:3px 7px;border-radius:5px;z-index:9999;pointer-events:none';document.body.appendChild(buildStamp);
-let last=performance.now(),uiTimer=0;function frame(now){if(renameTarget&&document.activeElement!==inlineRename)inlineRename.focus({preventScroll:true});if(renameTarget)positionInlineRename();let dt=Math.min(.05,(now-last)/1000);last=now;if(!paused){update(dt*speed);uiTimer+=dt;if(uiTimer>.4){updateUI();uiTimer=0;}}draw();requestAnimationFrame(frame);}load();ask();requestAnimationFrame(frame);
+let last=performance.now(),uiTimer=0;// WASD and arrow keys pan the same camera used by drag-to-pan.
+const panKeys=new Set();
+const panDirections={w:[0,-1],arrowup:[0,-1],s:[0,1],arrowdown:[0,1],a:[-1,0],arrowleft:[-1,0],d:[1,0],arrowright:[1,0]};
+function typingInField(){const el=document.activeElement;return el&&(el.isContentEditable||['INPUT','TEXTAREA','SELECT'].includes(el.tagName));}
+window.addEventListener('keydown',e=>{
+ const key=e.key.toLowerCase();
+ if(!panDirections[key]||typingInField()||e.ctrlKey||e.metaKey||e.altKey)return;
+ e.preventDefault();panKeys.add(key);
+});
+window.addEventListener('keyup',e=>{panKeys.delete(e.key.toLowerCase());});
+window.addEventListener('blur',()=>panKeys.clear());
+function panWithKeys(dt){
+ if(!panKeys.size||typingInField())return;
+ let dx=0,dy=0;
+ for(const key of panKeys){const direction=panDirections[key];if(direction){dx+=direction[0];dy+=direction[1];}}
+ if(!dx&&!dy)return;
+ const length=Math.hypot(dx,dy),distance=380*dt;
+ cameraX=clamp(cameraX+dx/length*distance,LAND.left,LAND.right-W);
+ cameraY=clamp(cameraY+dy/length*distance,LAND.top,LAND.bottom-H);
+}
+function frame(now){if(renameTarget&&document.activeElement!==inlineRename)inlineRename.focus({preventScroll:true});if(renameTarget)positionInlineRename();let dt=Math.min(.05,(now-last)/1000);last=now;panWithKeys(dt);if(!paused){update(dt*speed);uiTimer+=dt;if(uiTimer>.4){updateUI();uiTimer=0;}}draw();requestAnimationFrame(frame);}load();ask();requestAnimationFrame(frame);
 </script></body></html>
