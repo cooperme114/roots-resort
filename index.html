@@ -465,15 +465,21 @@ function chooseActivity(g){
   const level=g[key];if(level<8)break;
   const candidates=[
    ...vendors.filter(item=>!holidayType(item.type)).map(item=>({kind:'vendor',item})),
-   ...attractions.filter(a=>a.queue.length<(a.type==='shuttle_coaster'?8:a.type==='bird_show'?24:12)).map(item=>({kind:'ride',item}))
-  ].filter(o=>activityRelief(o.kind,o.item,key)>0);
+   ...attractions.map(item=>({kind:'ride',item}))
+  ].filter(o=>{
+   const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
+   return (o.item.queue?.length||0)<capacity+10&&activityRelief(o.kind,o.item,key)>0;
+  });
   if(!candidates.length)continue;
   for(const o of candidates){
    const relief=activityRelief(o.kind,o.item,key);
    const distance=Math.hypot(g.x-o.item.x,g.y-o.item.y);
-   const wait=o.kind==='vendor'?(o.item.queue?.length||0)*10+(o.item.serving?10:0):o.item.queue.length*(o.item.type==='drop_tower'?11:13)/(o.item.riders.length||4);
-   // Reward useful relief; penalize wasted capacity, travel, and waiting.
-   o.score=Math.min(level,relief)-Math.max(0,relief-level)*.65-distance*.025-wait*.3;
+   const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
+   const queued=o.item.queue?.length||0;
+   const busy=o.kind==='vendor'?(benchType(o.item.type)?(o.item.sitters?.length||0):(o.item.serving?1:0)):o.item.riders.filter(Boolean).length;
+   const queuePressure=(queued+busy)/capacity;
+   // Nearby activities and short waits outweigh avoiding a little unused relief.
+   o.score=Math.min(level,relief)-Math.max(0,relief-level)*.12-distance*.06-queuePressure*9;
   }
   candidates.sort((a,b)=>b.score-a.score);
   const best=candidates[0];
