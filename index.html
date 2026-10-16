@@ -468,34 +468,39 @@ function activityRelief(kind,item,key){
 }
 function chooseActivity(g){
  if(g.cooldown>0)return false;
- const needs=['bladder','hunger','thirst','exhaustion','boredom'].sort((a,b)=>g[b]-g[a]);
- for(const key of needs){
-  const level=g[key];if(level<8)break;
-  const candidates=[
-   ...vendors.filter(item=>!holidayType(item.type)).map(item=>({kind:'vendor',item})),
-   ...attractions.map(item=>({kind:'ride',item}))
-  ].filter(o=>{
-   const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
-   return (o.item.queue?.length||0)<capacity+5&&activityRelief(o.kind,o.item,key)>0;
-  });
-  if(!candidates.length)continue;
-  for(const o of candidates){
+ const needs=['bladder','hunger','thirst','exhaustion','boredom'];
+ // Compare each activity's combined useful relief, rather than only the most urgent need.
+ if(!needs.some(key=>g[key]>=8))return false;
+ const candidates=[
+  ...vendors.filter(item=>!holidayType(item.type)).map(item=>({kind:'vendor',item})),
+  ...attractions.map(item=>({kind:'ride',item}))
+ ].filter(o=>{
+  const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
+  return (o.item.queue?.length||0)<capacity+5&&needs.some(key=>g[key]>=8&&activityRelief(o.kind,o.item,key)>0);
+ });
+ if(!candidates.length)return false;
+ for(const o of candidates){
+  const distance=Math.hypot(g.x-o.item.x,g.y-o.item.y);
+  const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
+  const queued=o.item.queue?.length||0;
+  const busy=o.kind==='vendor'?(benchType(o.item.type)?(o.item.sitters?.length||0):(o.item.serving?1:0)):o.item.riders.filter(Boolean).length;
+  const queuePressure=(queued+busy)/capacity;
+  let benefit=0,waste=0;
+  for(const key of needs){
    const relief=activityRelief(o.kind,o.item,key);
-   const distance=Math.hypot(g.x-o.item.x,g.y-o.item.y);
-   const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
-   const queued=o.item.queue?.length||0;
-   const busy=o.kind==='vendor'?(benchType(o.item.type)?(o.item.sitters?.length||0):(o.item.serving?1:0)):o.item.riders.filter(Boolean).length;
-   const queuePressure=(queued+busy)/capacity;
-   // Nearby activities and short waits outweigh avoiding a little unused relief.
-   o.score=Math.min(level,relief)-(o.kind==='vendor'?Math.max(0,relief-level)*.12:0)-distance*.06-queuePressure*9+(o.kind==='ride'?(g.ridePreferences?.[rideCategory[o.item.type]]||0):0);
+   if(!relief)continue;
+   benefit+=Math.min(g[key],relief)*(g[key]>=8?1:0);
+   waste+=Math.max(0,relief-g[key]);
   }
-  candidates.sort((a,b)=>b.score-a.score);
-  const best=candidates[0];
-  if(best.kind==='vendor')sendToVendor(g,best.item);
-  else{g.mode='toQueue';g.ride=best.item;g.route=null;}
-  return true;
+  // Visitors value every need an activity helps, while retaining individual ride tastes.
+  o.score=benefit-(o.kind==='vendor'?waste*.12:0)-distance*.06-queuePressure*9+
+   (o.kind==='ride'?(g.ridePreferences?.[rideCategory[o.item.type]]||0):0);
  }
- return false;
+ candidates.sort((a,b)=>b.score-a.score);
+ const best=candidates[0];
+ if(best.kind==='vendor')sendToVendor(g,best.item);
+ else{g.mode='toQueue';g.ride=best.item;g.route=null;}
+ return true;
 }
 function update(dt){for(let g of guests){if(g.mode==='wander'&&g.stuckFor>1.5){g.stuckFor=0;wanderTarget(g);}g.cooldown=Math.max(0,g.cooldown-dt);if(g.mode==='dragged')continue;if(g.dropHoldUntil&&performance.now()<g.dropHoldUntil)continue;if(g.mode==='enter'){if(moveTo(g,GATE_X,GATE_Y-125,dt)){g.mode='wander';wanderTarget(g);}continue;}if(g.mode==='depart'){moveTo(g,GATE_X,H+15,dt);continue;}if(g.mode==='riding')continue;if(g.mode==='benchRest'){g.serviceTime-=dt;if(g.serviceTime<=0){const v=g.vendor;if(v)v.sitters=(v.sitters||[]).filter(p=>p!==g);changeNeed(g,'exhaustion',-50);g.mode='wander';g.vendor=null;g.cooldown=3;g.x+=32;g.y+=36;wanderTarget(g);}continue;}if(g.mode==='shirtExit'){const d=g.ty-g.y;if(d<=1){g.mode='wander';g.cooldown=3;wanderTarget(g);}else{const step=Math.min(d,g.speed*dt);g.y+=step;g.facing='front';}continue;}if(g.mode==='vendorService'){g.serviceTime-=dt;if(g.serviceTime<=0){const v=g.vendor,t=vendorTypes[v.type];changeNeed(g,t.stat,t.amount);for(const [need,relief] of Object.entries(t.extraRelief||{}))changeNeed(g,need,-relief);if(v.type==='lemonade')changeNeed(g,'bladder',10);if(v.type==='shirts'){g.souvenirShirt=v.shirtChoice||'magenta';v.sales=(v.sales||0)+1;shirtSales++;if(shirtSales%10===0){syncVisitors();$('hint').textContent='T-shirt advertising attracted a new visitor!';}save();}if(v.serving===g)v.serving=null;if(v.sitters)v.sitters=v.sitters.filter(p=>p!==g);g.vendor=null;g.cooldown=1;if(v.type==='shirts'){g.x=v.x;g.y=v.y+40;g.tx=v.x;g.ty=v.y+60;g.facing='front';g.route=null;g.mode='shirtExit';}else{g.mode='wander';g.x=v.x+36;g.y=v.y+55;wanderTarget(g);}}continue;}if(g.mode==='toVendor'){const v=g.vendor;if(!v||!vendors.includes(v)){g.mode='wander';continue;}if(benchType(v.type)){v.sitters=v.sitters||[];const index=v.queue.indexOf(g);if(index===0&&v.sitters.length<2){const near=Math.hypot(g.x-v.x,g.y-(v.y+34))<46;if(near||moveTo(g,v.x,v.y+34,dt)){v.queue.shift();v.sitters.push(g);g.mode='benchRest';g.route=null;g.serviceTime=10;g.x=v.x+(v.type==='bench_side'?(v.flip?-9:9):(v.sitters.length===1?-18:18));g.y=v.y+8;}}else if(index>0){{const spot=safeQueueSpot(v.x-(index-1)*20,v.y+34,v.x,v.y+34);if(spot)moveTo(g,spot.x,spot.y,dt);}}continue;}const indoor=v.type==='bathroom'||v.type==='shirts';const index=(v.queue||[]).indexOf(g);const ready=indoor||(index===0&&!v.serving);const dest=ready?{x:v.x,y:v.y+51}:(safeQueueSpot(v.x-32-Math.max(0,index-1)*27,v.y+51,v.x,v.y+51)||{x:g.x,y:g.y});const reached=(!ready&&Math.hypot(g.x-dest.x,g.y-dest.y)<14)||moveTo(g,dest.x,dest.y,dt);if(reached&&ready){v.queue=v.queue.filter(p=>p!==g);if(!indoor)v.serving=g;g.mode='vendorService';g.serviceTime=10;g.x=v.x;g.y=v.y+43;}else if(g.stuckFor>3){g.stuckFor=0;v.queue=v.queue.filter(p=>p!==g);g.vendor=null;g.mode='wander';g.cooldown=2;wanderTarget(g);}continue;}if(g.mode==='toQueue'){let a=g.ride;if(!a||!attractions.includes(a)){g.mode='wander';continue;}let dest=a.type==='mountain_coaster'?{x:a.x,y:a.y+38}:a.type==='bird_show'?{x:a.x-101,y:a.y+24}:a.type==='drop_tower'?{x:a.x-60,y:a.y+65}:a.type==='shuttle_coaster'?{x:a.x-226,y:a.y+16}:a.type==='viking_ship'?{x:a.x,y:a.y+42}:a.type==='ferris_wheel'?{x:a.x,y:a.y+31}:{x:a.x-70,y:a.y+63};if(moveTo(g,dest.x,dest.y,dt)){g.mode='queue';a.queue.push(g);}else if(g.stuckFor>3){g.stuckFor=0;g.mode='wander';g.ride=null;g.cooldown=2;wanderTarget(g);}continue;}if(g.mode==='queue')continue;if(g.mode==='exit'){const dx=g.tx-g.x,dy=g.ty-g.y,d=Math.hypot(dx,dy);if(d<3||!freeTarget(g.x+dx/Math.max(d,1)*Math.min(d,g.speed*dt),g.y+dy/Math.max(d,1)*Math.min(d,g.speed*dt))){g.mode='wander';g.route=null;g.cooldown=8;g.think=rand(0,10);wanderTarget(g);}else{const step=Math.min(d,g.speed*dt);g.x+=dx/d*step;g.y+=dy/d*step;g.facing='front';}continue;}/* Check activities only on a timer, rather than every animation frame. */g.think-=dt;if(g.think<=0){g.think+=10;if(chooseActivity(g))continue;}/* Keep movement smooth between decisions. */if(moveTo(g,g.tx,g.ty,dt)){wanderTarget(g);}}
 removeUnhappyGuests();
