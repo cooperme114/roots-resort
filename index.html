@@ -454,6 +454,8 @@ function removeUnhappyGuests(){for(const g of guests.filter(g=>g.leaving&&g.mode
 function sendToVendor(g,v){if(g.ride){g.ride.queue=g.ride.queue.filter(p=>p!==g);g.ride.riders=g.ride.riders.map(p=>p===g?null:p);}if(g.vendor){g.vendor.queue=(g.vendor.queue||[]).filter(p=>p!==g);if(g.vendor.sitters)g.vendor.sitters=g.vendor.sitters.filter(p=>p!==g);}g.ride=null;g.vendor=v;v.queue=v.queue||[];if(!v.queue.includes(g))v.queue.push(g);g.stuckFor=0;g.mode='toVendor';g.route=null;g.cooldown=0;}
 // Each activity declares the needs it relieves; future rides can be added here.
 const rideRelief=Object.fromEntries(Object.entries(rideDetails).map(([id,details])=>[id,details.relief]));
+// More expensive attractions are more desirable, independent of need relief.
+const ridePopularity={carousel:3,ferris_wheel:5,viking_ship:6,drop_tower:8,bird_show:8,mountain_coaster:10,shuttle_coaster:10};
 function activityRelief(kind,item,key){
  if(kind==='vendor'){const info=vendorTypes[item.type];return info?(info.stat===key?Math.abs(info.amount):0)+(info.extraRelief?.[key]||0):0;}
  return (rideRelief[item.type]||{})[key]||0;
@@ -479,7 +481,7 @@ function chooseActivity(g){
    const busy=o.kind==='vendor'?(benchType(o.item.type)?(o.item.sitters?.length||0):(o.item.serving?1:0)):o.item.riders.filter(Boolean).length;
    const queuePressure=(queued+busy)/capacity;
    // Nearby activities and short waits outweigh avoiding a little unused relief.
-   o.score=Math.min(level,relief)-Math.max(0,relief-level)*.12-distance*.06-queuePressure*9;
+   o.score=Math.min(level,relief)-(o.kind==='vendor'?Math.max(0,relief-level)*.12:0)-distance*.06-queuePressure*9+(o.kind==='ride'?(ridePopularity[o.item.type]||0):0);
   }
   candidates.sort((a,b)=>b.score-a.score);
   const best=candidates[0];
