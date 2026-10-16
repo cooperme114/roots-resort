@@ -43,7 +43,7 @@ function drawVisitorSprite(g,x,y,scale=1,direction){
  draw(body,side?-6:-10,-8,side?12:20,23);draw(headPart,side?-7:-9,-19,side?14:18,15);
  ctx.restore();return true;
 }
-function newGuest(){let n=nextGuest++;const stats=['boredom','hunger','thirst','exhaustion','bladder'];const first=Math.floor(Math.random()*stats.length);let second=Math.floor(Math.random()*(stats.length-1));if(second>=first)second++;const needs=Object.fromEntries(stats.map((key,i)=>[key,i===first?5:i===second?2:0]));return {headIndex:Math.floor(Math.random()*visitorHeadNames.length),bodyIndex:Math.floor(Math.random()*visitorBodyNames.length),facing:'front',id:n,name:firstNames[Math.floor(Math.random()*firstNames.length)]+' '+n,...needs,steps:0,x:GATE_X+rand(-8,8),y:H+12,tx:GATE_X,ty:GATE_Y-125,speed:rand(20,34),skin:['#f3c39a','#d89a71','#b87b53','#e3ad84'][n%4],hair:['#513626','#a25d32','#2c2930','#b37b38'][n%4],shirt:colors[n%colors.length],hat:n%5===0&&colors[n%colors.length]!=='#5d8093',mode:'enter',ride:null,slot:-1,think:rand(0,10),cooldown:0};}
+function newGuest(){let n=nextGuest++;const stats=['boredom','hunger','thirst','exhaustion','bladder'];const first=Math.floor(Math.random()*stats.length);let second=Math.floor(Math.random()*(stats.length-1));if(second>=first)second++;const needs=Object.fromEntries(stats.map((key,i)=>[key,i===first?5:i===second?2:0]));return {headIndex:Math.floor(Math.random()*visitorHeadNames.length),bodyIndex:Math.floor(Math.random()*visitorBodyNames.length),facing:'front',id:n,name:firstNames[Math.floor(Math.random()*firstNames.length)]+' '+n,...needs,ridePreferences:randomRidePreferences(),steps:0,x:GATE_X+rand(-8,8),y:H+12,tx:GATE_X,ty:GATE_Y-125,speed:rand(20,34),skin:['#f3c39a','#d89a71','#b87b53','#e3ad84'][n%4],hair:['#513626','#a25d32','#2c2930','#b37b38'][n%4],shirt:colors[n%colors.length],hat:n%5===0&&colors[n%colors.length]!=='#5d8093',mode:'enter',ride:null,slot:-1,think:rand(0,10),cooldown:0};}
 for(let i=0;i<10;i++)guests.push(newGuest());
 function syncVisitors(){const desired=10+Math.floor(totalSpent/100)+Math.floor(shirtSales/10);while(totalVisitorsAdmitted<desired){guests.push(newGuest());totalVisitorsAdmitted++;}}
 function saveData(){return {version:1,gold,streak,totalSpent,totalVisitorsAdmitted,visitorsLeft,shirtSales,attractions:attractions.map(a=>({x:a.x,y:a.y,angle:a.angle||0,type:a.type||'carousel',style:a.style||'Classic',name:a.name||null,locked:!!a.locked})),vendors:vendors.map(v=>({x:v.x,y:v.y,type:v.type,flip:!!v.flip,locked:!!v.locked,shirtChoice:v.shirtChoice||'magenta',sales:v.sales||0})),pathTiles,totalRides,gateStyle,cameraX,cameraY};}
@@ -455,7 +455,13 @@ function sendToVendor(g,v){if(g.ride){g.ride.queue=g.ride.queue.filter(p=>p!==g)
 // Each activity declares the needs it relieves; future rides can be added here.
 const rideRelief=Object.fromEntries(Object.entries(rideDetails).map(([id,details])=>[id,details.relief]));
 // More expensive attractions are more desirable, independent of need relief.
-const ridePopularity={carousel:3,ferris_wheel:5,viking_ship:6,drop_tower:8,bird_show:8,mountain_coaster:10,shuttle_coaster:10};
+const rideCategory={carousel:'gentle',ferris_wheel:'gentle',viking_ship:'thrill',drop_tower:'thrill',mountain_coaster:'coaster',shuttle_coaster:'coaster',bird_show:'show'};
+function randomRidePreferences(){
+ const preferences={gentle:0,thrill:0,coaster:0,show:0};
+ const categories=Object.keys(preferences);
+ for(let i=0;i<24;i++)preferences[categories[Math.floor(Math.random()*categories.length)]]++;
+ return preferences;
+}
 function activityRelief(kind,item,key){
  if(kind==='vendor'){const info=vendorTypes[item.type];return info?(info.stat===key?Math.abs(info.amount):0)+(info.extraRelief?.[key]||0):0;}
  return (rideRelief[item.type]||{})[key]||0;
@@ -481,7 +487,7 @@ function chooseActivity(g){
    const busy=o.kind==='vendor'?(benchType(o.item.type)?(o.item.sitters?.length||0):(o.item.serving?1:0)):o.item.riders.filter(Boolean).length;
    const queuePressure=(queued+busy)/capacity;
    // Nearby activities and short waits outweigh avoiding a little unused relief.
-   o.score=Math.min(level,relief)-(o.kind==='vendor'?Math.max(0,relief-level)*.12:0)-distance*.06-queuePressure*9+(o.kind==='ride'?(ridePopularity[o.item.type]||0):0);
+   o.score=Math.min(level,relief)-(o.kind==='vendor'?Math.max(0,relief-level)*.12:0)-distance*.06-queuePressure*9+(o.kind==='ride'?(g.ridePreferences?.[rideCategory[o.item.type]]||0):0);
   }
   candidates.sort((a,b)=>b.score-a.score);
   const best=candidates[0];
