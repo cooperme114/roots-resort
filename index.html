@@ -468,7 +468,7 @@ function chooseActivity(g){
    ...attractions.map(item=>({kind:'ride',item}))
   ].filter(o=>{
    const capacity=o.kind==='ride'?(o.item.riders?.length||1):benchType(o.item.type)?2:1;
-   return (o.item.queue?.length||0)<capacity+10&&activityRelief(o.kind,o.item,key)>0;
+   return (o.item.queue?.length||0)<capacity+5&&activityRelief(o.kind,o.item,key)>0;
   });
   if(!candidates.length)continue;
   for(const o of candidates){
