@@ -602,7 +602,7 @@ const carpetSprites={};for(const [key,file] of Object.entries({base:'carpet_base
 function drawMagicCarpet(a){
  ctx.save();ctx.imageSmoothingEnabled=false;
  const draw=(key,x,y,w,h)=>{const im=carpetSprites[key];if(im.complete&&im.naturalWidth){ctx.drawImage(im,x,y,w,h);return true;}return false;};
- const pivotY=a.y-113,leftX=a.x-77,rightX=a.x+77,radius=29;
+ const pivotY=a.y-113,leftX=a.x-77,rightX=a.x+77,radius=42;
  const t=a.mode==='riding'?a.rideTime:0;
  // Three complete revolutions, smoothly starting and stopping at the loading position.
  const u=Math.max(0,Math.min(1,t/18));
@@ -630,7 +630,7 @@ function drawMagicCarpet(a){
  if(!draw('gondola',gx-88,gy-17,176,45)){ctx.fillStyle='#b62e8c';ctx.fillRect(gx-86,gy-10,172,27);}
  for(let i=0;i<a.riders.length;i++){
   const guest=a.riders[i];if(!guest)continue;
-  seatedPerson(guest,gx-54+i*10.2,gy+3,.52);
+  seatedPerson(guest,gx-67+i*12.2,gy+3,.52);
  }
  // A narrow front railing hides the guests' feet and anchors them to the seats.
  ctx.fillStyle='#e7b94e';ctx.fillRect(gx-73,gy+15,146,4);
