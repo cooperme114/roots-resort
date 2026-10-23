@@ -628,10 +628,12 @@ function drawMagicCarpet(a){
  }
  // The gondola is level. Guests are placed inside its seat area, not above it.
  if(!draw('gondola',gx-88,gy-17,176,45)){ctx.fillStyle='#b62e8c';ctx.fillRect(gx-86,gy-10,172,27);}
- for(let i=0;i<a.riders.length;i++){
-  const guest=a.riders[i];if(!guest)continue;
-  seatedPerson(guest,gx-67+i*12.2,gy+3,.52);
- }
+ const seatedGuests=a.riders.filter(Boolean);
+ const seatSpacing=seatedGuests.length>1?Math.min(25,132/(seatedGuests.length-1)):0;
+ seatedGuests.forEach((guest,i)=>{
+  const seatX=gx+(i-(seatedGuests.length-1)/2)*seatSpacing;
+  seatedPerson(guest,seatX,gy+3,.60);
+ });
  // A narrow front railing hides the guests' feet and anchors them to the seats.
  ctx.fillStyle='#e7b94e';ctx.fillRect(gx-73,gy+15,146,4);
  ctx.fillStyle='#9a277e';ctx.fillRect(gx-73,gy+19,146,3);
