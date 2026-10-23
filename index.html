@@ -630,7 +630,7 @@ function drawMagicCarpet(a){
  if(!draw('gondola',gx-88,gy-17,176,45)){ctx.fillStyle='#b62e8c';ctx.fillRect(gx-86,gy-10,172,27);}
  for(let i=0;i<a.riders.length;i++){
   const guest=a.riders[i];if(!guest)continue;
-  seatedPerson(guest,gx-67+i*12.2,gy+3,.52);
+  seatedPerson(guest,gx-61+i*12.2,gy+3,.52);
  }
  // A narrow front railing hides the guests' feet and anchors them to the seats.
  ctx.fillStyle='#e7b94e';ctx.fillRect(gx-73,gy+15,146,4);
