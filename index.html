@@ -535,7 +535,7 @@ function guestActivity(g){
 }
 function drawGuestStats(g){let x=Math.max(cameraX+8,Math.min(cameraX+W-194,g.x-92)),y=Math.max(cameraY+8,g.y-173);ctx.save();ctx.fillStyle='#fffdf0';ctx.strokeStyle='#326344';ctx.lineWidth=2;ctx.beginPath();ctx.roundRect(x,y,184,168,10);ctx.fill();ctx.stroke();ctx.fillStyle='#244d35';ctx.font='bold 14px system-ui';ctx.fillText(g.name,x+10,y+20);ctx.fillStyle='#86649a';ctx.beginPath();ctx.roundRect(x+128,y+5,49,21,5);ctx.fill();ctx.fillStyle='white';ctx.font='bold 11px system-ui';ctx.fillText('Rename',x+132,y+19);const items=[['Boredom',g.boredom,'#c98036'],['Hunger',g.hunger,'#c65856'],['Thirst',g.thirst,'#4b96c8'],['Exhaustion',g.exhaustion,'#8a73b9'],['Bladder',g.bladder,'#57a79b']];items.forEach(([name,value,color],i)=>{let yy=y+40+i*21;ctx.fillStyle='#284536';ctx.font='11px system-ui';ctx.fillText(name,x+10,yy);ctx.fillStyle='#e2e9dc';ctx.fillRect(x+88,yy-9,65,9);ctx.fillStyle=color;ctx.fillRect(x+88,yy-9,65*value/100,9);ctx.fillStyle='#284536';ctx.fillText(String(Math.round(value)),x+158,yy);});ctx.fillStyle='#38684b';ctx.font='italic 11px system-ui';const activity=guestActivity(g);let shown=activity;while(ctx.measureText(shown).width>164&&shown.length>4)shown=shown.slice(0,-2);if(shown!==activity)shown=shown.trimEnd()+'…';ctx.fillText(shown,x+10,y+155);ctx.restore();}
 function guestAt(x,y){return guests.filter(g=>g.mode!=='riding'&&g.mode!=='queue'&&g.mode!=='dragged').reverse().find(g=>Math.abs(g.x-x)<13&&Math.abs(g.y-y)<23);}
-function rideAt(x,y){return attractions.find(a=>a.type==='shuttle_coaster'?Math.abs(a.x-x)<205&&y>a.y-355&&y<a.y+18:a.type==='viking_ship'?Math.abs(a.x-x)<124&&y>a.y-195&&y<a.y+35:a.type==='ferris_wheel'?Math.abs(a.x-x)<116&&y>a.y-265&&y<a.y+35:a.type==='mountain_coaster'?Math.abs(a.x-x)<275&&y>a.y-320&&y<a.y+24:a.type==='bird_show'?Math.abs(a.x-x)<98&&y>a.y-145&&y<a.y+15:a.type==='planetarium'?Math.abs(a.x-x)<84&&y>a.y-158&&y<a.y+20:a.type==='magic_carpet'?Math.abs(a.x-x)<120&&y>a.y-215&&y<a.y+30:a.type==='drop_tower'?Math.abs(a.x-x)<68&&y>a.y-270&&y<a.y+72:Math.abs(a.x-x)<80&&y>a.y-110&&y<a.y+69)||null;}
+function rideAt(x,y){return attractions.find(a=>a.type==='shuttle_coaster'?Math.abs(a.x-x)<205&&y>a.y-355&&y<a.y+18:a.type==='viking_ship'?Math.abs(a.x-x)<124&&y>a.y-195&&y<a.y+35:a.type==='ferris_wheel'?Math.abs(a.x-x)<116&&y>a.y-265&&y<a.y+35:a.type==='mountain_coaster'?Math.abs(a.x-x)<275&&y>a.y-320&&y<a.y+24:a.type==='bird_show'?Math.abs(a.x-x)<98&&y>a.y-145&&y<a.y+15:a.type==='planetarium'?Math.abs(a.x-x)<84&&y>a.y-158&&y<a.y+20:a.type==='magic_carpet'?Math.abs(a.x-x)<120&&y>a.y-175&&y<a.y+30:a.type==='drop_tower'?Math.abs(a.x-x)<68&&y>a.y-270&&y<a.y+72:Math.abs(a.x-x)<80&&y>a.y-110&&y<a.y+69)||null;}
 function screenPoint(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height};}function pointAt(e){const p=screenPoint(e);return {x:p.x+cameraX,y:p.y+cameraY};}
 function assignToRide(g,a){for(const ride of attractions){ride.queue=ride.queue.filter(p=>p!==g);}if(g.ride){for(let i=0;i<g.ride.riders.length;i++)if(g.ride.riders[i]===g)g.ride.riders[i]=null;}g.ride=a;g.mode='toQueue';g.route=null;g.cooldown=0;g.think=2;$('hint').textContent=g.name+' is heading to the '+(a.type==='shuttle_coaster'?'Shuttle Coaster':a.type==='viking_ship'?'Viking Ship':a.type==='ferris_wheel'?'Ferris Wheel':a.type==='mountain_coaster'?'Mountain Coaster':a.type==='bird_show'?'Bird Show':a.type==='planetarium'?'Planetarium':a.type==='magic_carpet'?'Magic Carpet':a.type==='drop_tower'?'drop tower':'carousel')+' queue.';}
 // Train positions are sampled along one continuous loop, with each car trailing the previous car.
@@ -602,14 +602,14 @@ const carpetSprites={};for(const [key,file] of Object.entries({base:'carpet_base
 function drawMagicCarpet(a){
  ctx.save();ctx.imageSmoothingEnabled=false;
  const draw=(key,x,y,w,h)=>{const im=carpetSprites[key];if(im.complete&&im.naturalWidth){ctx.drawImage(im,x,y,w,h);return true;}return false;};
- const pivotY=a.y-112,leftX=a.x-77,rightX=a.x+77,radius=56;
+ const pivotY=a.y-116,leftX=a.x-77,rightX=a.x+77,radius=29;
  const t=a.mode==='riding'?a.rideTime:0;
  // Three complete revolutions, smoothly starting and stopping at the loading position.
  const u=Math.max(0,Math.min(1,t/18));
  const phase=6*Math.PI*(u*u*(3-2*u));
  const dx=Math.sin(phase)*radius,dy=Math.cos(phase)*radius;
  const gx=a.x+dx,gy=pivotY+dy;
- draw('base',a.x-120,a.y-193,240,201);
+ draw('base',a.x-120,a.y-169,240,177);
  // Draw rigid, connected mechanical arms rather than rotating the uploaded
  // diagonal arm pictures, whose painted-in angles do not match their pivots.
  // Each arm terminates at the corresponding end of the moving gondola.
@@ -755,7 +755,7 @@ function validMove(item,type,x,y){
  const bounds=buildingFootprint(item,x,y);
  if(bounds.l<LAND.left||bounds.r>LAND.right||bounds.t<LAND.top||bounds.b>LAND.bottom)return false;
  // Only reserve enough room for the visible art at the top of the park.
- const topExtent=item.type==='shuttle_coaster'?355:item.type==='viking_ship'?195:item.type==='ferris_wheel'?260:item.type==='mountain_coaster'?318:item.type==='drop_tower'?255:item.type==='bird_show'?145:item.type==='planetarium'?160:item.type==='magic_carpet'?220:item.type==='carousel'?82:0;
+ const topExtent=item.type==='shuttle_coaster'?355:item.type==='viking_ship'?195:item.type==='ferris_wheel'?260:item.type==='mountain_coaster'?318:item.type==='drop_tower'?255:item.type==='bird_show'?145:item.type==='planetarium'?160:item.type==='magic_carpet'?175:item.type==='carousel'?82:0;
  if(y-topExtent<LAND.top)return false;
  
  
