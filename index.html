@@ -602,31 +602,39 @@ const carpetSprites={};for(const [key,file] of Object.entries({base:'carpet_base
 function drawMagicCarpet(a){
  ctx.save();ctx.imageSmoothingEnabled=false;
  const draw=(key,x,y,w,h)=>{const im=carpetSprites[key];if(im.complete&&im.naturalWidth){ctx.drawImage(im,x,y,w,h);return true;}return false;};
- const pivotY=a.y-112,leftX=a.x-88,rightX=a.x+88,radius=55;
+ const pivotY=a.y-112,leftX=a.x-77,rightX=a.x+77,radius=56;
  const t=a.mode==='riding'?a.rideTime:0;
- // Ease into motion and return to the bottom before unloading.
- const progress=a.mode==='riding'?(t/18):0;
- const turns=3;
- const phase=a.mode==='riding'?2*Math.PI*turns*(progress*progress*(3-2*progress)):0;
+ // Three complete revolutions, smoothly starting and stopping at the loading position.
+ const u=Math.max(0,Math.min(1,t/18));
+ const phase=6*Math.PI*(u*u*(3-2*u));
  const dx=Math.sin(phase)*radius,dy=Math.cos(phase)*radius;
  const gx=a.x+dx,gy=pivotY+dy;
- // Rear scenery is fixed. Each arm's hub stays exactly on its tower pivot.
  draw('base',a.x-120,a.y-193,240,201);
- // The original arm sprites include both halves of an arm around a central gold hub.
- // Rotate the hub around the tower pivot; lower tips follow the gondola endpoints.
- for(const [key,px] of [['left',leftX],['right',rightX]]){
-  ctx.save();ctx.translate(px,pivotY);ctx.rotate(-phase);
-  if(!draw(key,-21,-60,42,120)){ctx.strokeStyle='#14a5b5';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(0,-55);ctx.lineTo(0,55);ctx.stroke();}
-  ctx.restore();
+ // Draw rigid, connected mechanical arms rather than rotating the uploaded
+ // diagonal arm pictures, whose painted-in angles do not match their pivots.
+ // Each arm terminates at the corresponding end of the moving gondola.
+ const ends=[[leftX,gx-77],[rightX,gx+77]];
+ for(const [px,ex] of ends){
+  const ey=gy+6;
+  ctx.lineCap='round';ctx.lineJoin='round';
+  ctx.strokeStyle='#6a367e';ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(px,pivotY);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.strokeStyle='#e9b64c';ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(px,pivotY);ctx.lineTo(ex,ey);ctx.stroke();
+  ctx.strokeStyle='#159ca9';ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(px,pivotY);ctx.lineTo(ex,ey);ctx.stroke();
+  for(const [cx,cy] of [[px,pivotY],[ex,ey]]){
+   ctx.fillStyle='#763a92';ctx.beginPath();ctx.arc(cx,cy,9,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#f4c34e';ctx.beginPath();ctx.arc(cx,cy,6,0,Math.PI*2);ctx.fill();
+   ctx.fillStyle='#168eae';ctx.beginPath();ctx.arc(cx,cy,3,0,Math.PI*2);ctx.fill();
+  }
  }
- // Guests sit in the gondola and move with it, without rotating upside down.
- // Draw guests before the front of the gondola so its railing covers their legs.
+ // The gondola is level. Guests are placed inside its seat area, not above it.
+ if(!draw('gondola',gx-88,gy-17,176,45)){ctx.fillStyle='#b62e8c';ctx.fillRect(gx-86,gy-10,172,27);}
  for(let i=0;i<a.riders.length;i++){
   const guest=a.riders[i];if(!guest)continue;
-  const x=gx-68+i*12.4;
-  seatedPerson(guest,x,gy-13,.45);
+  seatedPerson(guest,gx-67+i*12.2,gy+8,.37);
  }
- if(!draw('gondola',gx-88,gy-17,176,45)){ctx.fillStyle='#b62e8c';ctx.fillRect(gx-86,gy-10,172,27);}
+ // A narrow front railing hides the guests' feet and anchors them to the seats.
+ ctx.fillStyle='#e7b94e';ctx.fillRect(gx-73,gy+15,146,4);
+ ctx.fillStyle='#9a277e';ctx.fillRect(gx-73,gy+19,146,3);
  if(a.queue.length){ctx.fillStyle='#225d40';ctx.font='bold 12px system-ui';ctx.textAlign='center';ctx.fillText('Queue: '+a.queue.length,a.x,a.y+30);}
  ctx.restore();
 }
