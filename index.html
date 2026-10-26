@@ -776,7 +776,7 @@ function clickStructureButton(x,y){const b=structureButton();if(!b||x<b.x||x>b.x
 // Buildings may touch edge-to-edge; only their ground footprints must not overlap.
 function buildingFootprint(item,x=item.x,y=item.y){
  if(fenceType(item.type))return fenceBounds(item,x,y);
- if(holidayType(item.type)){const d=holidayDecor[item.type];return {l:x-d.w/2,r:x+d.w/2,t:y-d.h/2,b:y+d.h/2};}
+ if(item.type.startsWith('plant_flower_')){const tileX=Math.floor(x/T)*T,tileY=Math.floor(y/T)*T;return {l:tileX,r:tileX+T,t:tileY,b:tileY+T};}if(holidayType(item.type)){const d=holidayDecor[item.type];return {l:x-d.w/2,r:x+d.w/2,t:y-d.h/2,b:y+d.h/2};}
  if(benchType(item.type))return item.type==='bench_side'?{l:x-13,r:x+13,t:y-22,b:y+22}:{l:x-24,r:x+24,t:y-16,b:y+16};if(item.type==='shuttle_coaster')return {l:x-205,r:x+205,t:y-354,b:y+16};if(item.type==='viking_ship')return {l:x-125,r:x+125,t:y-195,b:y+35};if(item.type==='ferris_wheel')return {l:x-115,r:x+115,t:y-260,b:y+30};if(item.type==='mountain_coaster')return {l:x-280,r:x+280,t:y-318,b:y+12};if(item.type==='carousel')return {l:x-77,r:x+77,t:y-64,b:y+69};
  if(item.type==='bird_show')return {l:x-73,r:x+73,t:y-47,b:y+9};if(item.type==='planetarium')return {l:x-73,r:x+73,t:y-44,b:y+16};if(item.type==='magic_carpet')return {l:x-116,r:x+116,t:y-58,b:y+24};
  if(item.type==='drop_tower')return {l:x-54,r:x+54,t:y-43,b:y+43};
