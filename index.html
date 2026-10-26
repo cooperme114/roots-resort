@@ -355,7 +355,7 @@ function safeQueueSpot(x,y,originX=x,originY=y){
 function rideQueueSpot(a,i){
  // One horizontal line to the left of each attraction, rather than rows
  // that grow southward into fences or water.
- const entranceX=a.type==='shuttle_coaster'?a.x-226:a.type==='mountain_coaster'?a.x-160:a.type==='bird_show'?a.x-101:a.type==='planetarium'?a.x:a.type==='3d_cinema'?a.x+22:a.type==='magic_carpet'?a.x-112:a.type==='drop_tower'?a.x-70:a.type==='viking_ship'||a.type==='ferris_wheel'?a.x-45:a.x-80;
+ const entranceX=a.type==='shuttle_coaster'?a.x-226:a.type==='mountain_coaster'?a.x-160:a.type==='bird_show'?a.x-101:a.type==='planetarium'?a.x:a.type==='3d_cinema'?a.x+14:a.type==='magic_carpet'?a.x-112:a.type==='drop_tower'?a.x-70:a.type==='viking_ship'||a.type==='ferris_wheel'?a.x-45:a.x-80;
  const y=a.y+(a.type==='shuttle_coaster'?16:a.type==='viking_ship'?42:a.type==='ferris_wheel'?31:a.type==='mountain_coaster'?38:a.type==='bird_show'?24:a.type==='planetarium'?18:a.type==='3d_cinema'?30:a.type==='magic_carpet'?20:a.type==='drop_tower'?65:61);
  return safeQueueSpot(entranceX-i*19,y,entranceX,y);
 }
