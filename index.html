@@ -244,7 +244,7 @@ function shopPreview(src,label){return '<div class="shop-preview"><img src="'+sr
 function decorPreview(id){return shopPreview((fenceType(id)?'sprites/fences/':'sprites/decor/')+encodeURIComponent(holidayDecor[id].file),holidayDecor[id].name);}
 function vendorPreview(id){return shopPreview('sprites/vendors/vendor_'+id+'.png',vendorTypes[id].name);}
 function ridePreview(id){
- const path=id==='viking_ship'?'sprites/viking_ship/ship.png':id==='ferris_wheel'?'sprites/ferris_wheel/wheel.png':id==='carousel'?'sprites/carousel/carousel-top-01.png':id==='drop_tower'?'sprites/drop_tower/pole.png':id==='mountain_coaster'?'sprites/Mountain_coaster/Mountain_Coaster_Track.png':id==='magic_carpet'?'sprites/carpets/carpet_base.png':id==='planetarium'?'sprites/planetarium/show_planetarium.png':id==='3d_cinema'?'sprites/3d_cinema/3d_cinema.png':'sprites/bird_show/stage_and_trees.png';
+ const path=id==='viking_ship'?'sprites/viking_ship/ship.png':id==='ferris_wheel'?'sprites/ferris_wheel/cart_red.png':id==='carousel'?'sprites/carousel/horse_01.png':id==='drop_tower'?'sprites/drop_tower/pole.png':id==='mountain_coaster'?'sprites/Mountain_coaster/Mountain_Coaster_Track.png':id==='magic_carpet'?'sprites/carpets/carpet_base.png':id==='planetarium'?'sprites/planetarium/show_planetarium.png':id==='3d_cinema'?'sprites/3d_cinema/3d_cinema.png':'sprites/bird_show/stage_and_trees.png';
  return shopPreview(path,buildDetails(id).name);
 }
 function showShop(category,subcategory){
